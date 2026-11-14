@@ -34,13 +34,14 @@ jobs:
       # ── 4. Run the main agent ──────────────────────────────────────────────
       - name: Run PetTron Agent
         env:
+          PYTHONPATH: "."
           PYTHONUNBUFFERED: "1"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
           PRIVATE_REPO_FOR_LOG: ${{ secrets.PRIVATE_REPO_FOR_LOG }}
-        run: python src/main.py
+        run: python -m src.main
 
       # ── 5. Commit updated run state back to this repo ──────────────────────
       # The [skip ci] tag prevents this commit from triggering another run.

@@ -26,6 +26,11 @@ import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+# Ensure repo root is always on sys.path so 'from src.xxx' works anywhere
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import yaml
 from github import Github
 
