@@ -89,18 +89,27 @@ class Notifier:
         create it as a private repository. If creation fails, fall back to
         the main PetTron repository so the issue is never lost.
         """
+        # Normalize target repo name (handle 'pettron-logs' without username)
+        target = self.private_repo_name.strip()
+        if "/" not in target:
+            try:
+                username = self.gh.get_user().login
+                target = f"{username}/{target}"
+            except Exception:
+                target = f"juni2003/{target}"
+
         try:
-            repo = self.gh.get_repo(self.private_repo_name)
+            repo = self.gh.get_repo(target)
             # Access an attribute to force checking existence
             _ = repo.id
             return repo
         except (UnknownObjectException, GithubException) as exc:
             logger.info(
-                f"[Notifier] Repo '{self.private_repo_name}' not found or inaccessible: {exc}. "
+                f"[Notifier] Repo '{target}' not found or inaccessible: {exc}. "
                 "Attempting to create it automatically as a private repository..."
             )
             try:
-                repo_name_only = self.private_repo_name.split("/")[-1]
+                repo_name_only = target.split("/")[-1]
                 user = self.gh.get_user()
                 repo = user.create_repo(
                     name=repo_name_only,
@@ -112,7 +121,7 @@ class Notifier:
                 return repo
             except Exception as create_exc:
                 logger.warning(
-                    f"[Notifier] Could not auto-create repo '{self.private_repo_name}': {create_exc}."
+                    f"[Notifier] Could not auto-create repo '{target}': {create_exc}."
                 )
 
         fallback_name = "juni2003/PetTron"
