@@ -1,0 +1,243 @@
+{
+  "personal": {
+    "name": "Junaid Mohi-Ud-Din",
+    "github": "https://github.com/juni2003",
+    "portfolio": "https://junaid-portfolio.vercel.app",
+    "availability": "Open to part-time freelance gigs and full-time remote roles",
+    "location": "Pakistan (Remote-first)",
+    "pricing": {
+      "hourly_rate_usd": "15-30",
+      "project_basis": "Negotiable based on scope",
+      "note": "Flexible for interesting open-source or AI-focused projects"
+    }
+  },
+  "identity": "AI & Automation Engineer with a strong Full-Stack foundation. Specializes in building end-to-end intelligent systems: LLM-driven agentic workflows, RAG pipelines, multimodal AI, and scalable web APIs. Bridges cutting-edge AI with production-grade web infrastructure.",
+  "target_roles": [
+    "AI Engineer",
+    "Machine Learning Engineer",
+    "AI Automation Engineer",
+    "Backend API Engineer",
+    "Full-Stack Developer",
+    "Data Scientist"
+  ],
+  "core_stack": {
+    "languages": ["Python", "JavaScript", "TypeScript", "C++"],
+    "ai_ml": [
+      "LangGraph",
+      "RAG (FAISS, pgvector)",
+      "LLMs (Gemini, Claude, Groq/Llama)",
+      "PyTorch",
+      "Scikit-Learn",
+      "HuggingFace Transformers",
+      "Computer Vision (CNNs, ResNet50)",
+      "NLP (BioLinkBERT, TF-IDF)",
+      "Sentence Transformers",
+      "Agentic AI Workflows",
+      "MCP (Model Context Protocol)",
+      "Pandas",
+      "NumPy"
+    ],
+    "backend": [
+      "FastAPI",
+      "Flask",
+      "Node.js",
+      "Express.js",
+      "REST APIs",
+      "Webhooks",
+      "Scrapy",
+      "BeautifulSoup",
+      "Playwright"
+    ],
+    "frontend": [
+      "React.js",
+      "Next.js 14/15",
+      "Tailwind CSS",
+      "TypeScript",
+      "Three.js",
+      "Framer Motion",
+      "HTML5",
+      "CSS3"
+    ],
+    "databases": [
+      "PostgreSQL",
+      "MongoDB",
+      "SQLite",
+      "Redis",
+      "Supabase (pgvector)",
+      "SQL"
+    ],
+    "devops_tools": [
+      "Git",
+      "Docker",
+      "GitHub Actions",
+      "Kubernetes",
+      "Vercel",
+      "Render",
+      "VS Code",
+      "Postman"
+    ]
+  },
+  "experience": [
+    {
+      "title": "Machine Learning Fellow",
+      "company": "Buildables",
+      "period": "Aug 2025 – Nov 2025",
+      "highlights": [
+        "Built Smart Farming Advisor with RAG pipelines and an LLM intent router achieving 100% automated intent classification accuracy",
+        "Developed crop recommendation model (99.39% accuracy) and plant disease detection (98.97% accuracy with ResNet50)",
+        "Engineered agentic LangGraph workflows with REST API backends",
+        "Accelerated frontend development by 40% using AI coding assistants (Cursor, Copilot)"
+      ]
+    },
+    {
+      "title": "Artificial Intelligence Intern",
+      "company": "SoftBox Technologies",
+      "period": "Jun 2025 – Aug 2025",
+      "highlights": [
+        "Engineered PyTorch-based CNNs and integrated BioBERT for Medical VQA tasks",
+        "Built automated data pipelines and deployed scalable RAG pipelines",
+        "Reduced debugging time by 30% by integrating GitHub Copilot and Claude into UI development",
+        "Processed complex visual/textual datasets for the VisiHealth AI project"
+      ]
+    }
+  ],
+  "flagship_projects": [
+    {
+      "name": "NexusAI — Enterprise Agentic Fashion Assistant",
+      "repo": "https://github.com/juni2003/NexusAI-Fashion-Assistant",
+      "tech": ["LangGraph", "Groq (Llama-3)", "FastAPI", "Next.js 15", "Supabase pgvector", "Sentence Transformers", "FlashRank", "Framer Motion"],
+      "highlights": [
+        "Production-ready multi-agent system with LangGraph for autonomous intent classification (Sales vs. Support)",
+        "Sub-second LLM inference using Groq LPU",
+        "Advanced RAG with Supabase pgvector + FlashRank cross-encoder re-ranking for top-3 product retrieval",
+        "Real-time streaming via Server-Sent Events (SSE)"
+      ],
+      "relevance_tags": ["LangGraph", "RAG", "FastAPI", "LLM", "Agentic AI", "Groq", "Supabase", "Next.js"]
+    },
+    {
+      "name": "CrawlX — Advanced Web Scraping Platform",
+      "repo": "https://github.com/juni2003/CrawlX-Data-Scrapping-Project",
+      "tech": ["Python 3.12", "FastAPI", "Next.js 14", "PostgreSQL", "Scrapy", "httpx", "Trafilatura", "APScheduler", "NLTK", "Three.js", "TypeScript"],
+      "highlights": [
+        "Processes 500+ pages/minute with sub-100ms API latency",
+        "Advanced fuzzy search using PostgreSQL trigrams",
+        "Automated 6-hour scheduling with APScheduler",
+        "Multiple data export formats: CSV, PDF, JSON"
+      ],
+      "relevance_tags": ["Python", "FastAPI", "web scraping", "PostgreSQL", "Next.js", "automation", "data extraction"]
+    },
+    {
+      "name": "Smart Farming Advisor — Agentic AI",
+      "repo": "https://github.com/juni2003/Smart-Farming-Agentic-AI",
+      "tech": ["Python", "Flask", "PyTorch", "Scikit-learn", "ResNet50", "FAISS", "Sentence Transformers", "Google Gemini API", "Next.js 14", "TypeScript"],
+      "highlights": [
+        "End-to-end agentic AI combining crop recommendation, disease detection, and farming Q&A",
+        "RAG pipeline with FAISS for semantic search across agricultural knowledge base",
+        "100% automated intent routing between tools",
+        "99.39% crop recommendation accuracy; 98.97% plant disease detection accuracy"
+      ],
+      "relevance_tags": ["Python", "RAG", "PyTorch", "Gemini", "Agentic AI", "FastAPI", "Machine Learning", "Flask"]
+    },
+    {
+      "name": "VisiHealth AI — Explainable Medical VQA",
+      "repo": "https://github.com/juni2003/VisiHealthAI-Medical-Visual-Question-Answering",
+      "tech": ["PyTorch", "ResNet50", "BioLinkBERT", "HuggingFace Transformers", "Flask", "Next.js 16", "TypeScript 5", "Framer Motion", "Three.js", "Zustand"],
+      "highlights": [
+        "Real Multi-Token Cross-Attention mechanism fusing image patches with text queries",
+        "81.3% closed-question VQA accuracy with explainable attention heatmaps",
+        "4,444-triplet Medical Knowledge Graph for human-readable rationales",
+        "Sub-3.5s REST API latency on complex medical scans"
+      ],
+      "relevance_tags": ["PyTorch", "Computer Vision", "NLP", "Flask", "Next.js", "Healthcare AI", "Deep Learning", "Explainable AI"]
+    },
+    {
+      "name": "CareerNode — AI Application Tracker",
+      "repo": "https://github.com/juni2003/CareerNode",
+      "tech": ["Next.js 14", "React", "Tailwind CSS", "FastAPI", "MongoDB", "Motor", "APScheduler", "Gemini API", "IMAP", "Vercel", "Render"],
+      "highlights": [
+        "Automated email sweeping via IMAP to parse Gmail for job application updates",
+        "AI-powered parsing with Gemini Flash to extract roles and statuses from noisy emails",
+        "Reduced manual application tracking time by 50%",
+        "Embedded AI assistant generating custom cover letters with portfolio context injection"
+      ],
+      "relevance_tags": ["Python", "FastAPI", "Gemini", "MongoDB", "Next.js", "automation", "AI", "Full-Stack"]
+    },
+    {
+      "name": "AI JobTracker",
+      "repo": "https://github.com/juni2003/ai-jobtracker",
+      "tech": ["React", "Vite", "FastAPI", "MongoDB", "Motor", "APScheduler", "Playwright", "BeautifulSoup4", "httpx", "Gemini API"],
+      "highlights": [
+        "AI-powered extraction using Gemini Flash Lite to parse messy webpage HTML into structured JSON",
+        "Dual pipeline scraping Pakistani (Rozee.pk, Mustakbil) and remote (Remotive, WeWorkRemotely) platforms",
+        "Premium Glassmorphic Kanban dashboard with drag-and-drop status tracking",
+        "Real-time smart filtering by title, company, city, and remote/onsite"
+      ],
+      "relevance_tags": ["Python", "FastAPI", "web scraping", "Gemini", "MongoDB", "React", "automation", "Playwright"]
+    },
+    {
+      "name": "Movie Recommendation System",
+      "repo": "https://github.com/juni2003/Movie-Recommendation-System",
+      "tech": ["React.js", "Flask", "Python 3.9", "Scikit-Learn", "KNN", "TF-IDF", "Pandas", "NumPy", "TMDB API", "PCA"],
+      "highlights": [
+        "Content-based filtering using KNN and TF-IDF for personalized recommendations",
+        "Sub-1.5s predictions for 100+ concurrent users",
+        "Real-time movie data via TMDB API integration",
+        "PCA visualization of movie similarity clusters"
+      ],
+      "relevance_tags": ["Python", "Machine Learning", "Flask", "React", "REST API", "Scikit-Learn", "recommendation system"]
+    }
+  ],
+  "other_projects": [
+    {
+      "name": "DayScript — Personal Diary App",
+      "tech": ["Django", "SQLite", "Bootstrap 5", "Python"],
+      "relevance_tags": ["Python", "Django", "Full-Stack", "CRUD", "authentication"]
+    },
+    {
+      "name": "AI Meme Generator",
+      "tech": ["Python", "Tkinter", "Pillow", "scikit-learn", "TF-IDF", "NLTK"],
+      "relevance_tags": ["Python", "NLP", "Machine Learning", "desktop app"]
+    },
+    {
+      "name": "Metro Ticketing System",
+      "tech": ["React", "Node.js", "Express.js", "MongoDB", "JWT", "Bootstrap"],
+      "relevance_tags": ["MERN stack", "Full-Stack", "React", "Node.js", "MongoDB", "authentication"]
+    },
+    {
+      "name": "Junaid Portfolio Website",
+      "tech": ["React", "Vite", "TailwindCSS", "Flask", "Node.js", "MongoDB"],
+      "relevance_tags": ["React", "Portfolio", "Full-Stack", "TailwindCSS"]
+    }
+  ],
+  "key_metrics": {
+    "web_scraping_throughput": "500+ pages/minute (CrawlX)",
+    "api_latency": "sub-100ms (CrawlX FastAPI)",
+    "ml_accuracy": {
+      "crop_recommendation": "99.39%",
+      "plant_disease_detection": "98.97%",
+      "medical_vqa": "81.3%"
+    },
+    "concurrent_user_handling": "100+ users at sub-1.5s response (Movie Rec System)",
+    "intent_classification": "100% accuracy (Smart Farming Advisor LLM Router)",
+    "ai_dev_speedup": "40% faster frontend development with AI coding assistants"
+  },
+  "opportunity_scout_keywords": [
+    "FastAPI", "LangGraph", "RAG", "LLM", "AI agent", "agentic", "Python",
+    "Next.js", "React", "PyTorch", "web scraping", "Scrapy", "automation",
+    "PostgreSQL", "MongoDB", "MCP", "Groq", "Gemini", "Supabase", "pgvector",
+    "chatbot", "recommendation system", "computer vision", "NLP", "data pipeline",
+    "Docker", "REST API", "webhook", "FastAPI", "full-stack"
+  ],
+  "outreach_style": {
+    "tone": "Professional, concise, value-first",
+    "format": "Acknowledge their specific problem → Mention 1 directly relevant project with a metric → State availability and pricing clearly → Offer a quick call or repo link",
+    "anti_patterns": [
+      "Never use generic templates",
+      "Never start with 'I am a developer looking for work'",
+      "Never mention pricing before demonstrating value",
+      "Never send walls of text",
+      "Never claim skills not in profile"
+    ]
+  }
+}
+

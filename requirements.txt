@@ -1,0 +1,11 @@
+# Core
+google-genai>=0.8.0
+groq>=0.11.0
+PyGithub>=2.3.0
+pydantic>=2.7.0
+pyyaml>=6.0.1
+requests>=2.31.0
+
+# Testing & Linting
+ruff>=0.4.0
+pytest>=8.0.0

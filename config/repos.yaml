@@ -1,0 +1,59 @@
+repositories:
+  # ── Add your personal repos here ─────────────────────────────────────────
+  # verify_cmd: the shell command PetTron runs AFTER applying a patch to
+  #             confirm the fix didn't break anything.
+  #
+  # Good verify_cmd options by project type:
+  #   Python only  → "python -m compileall ."
+  #   Python+tests → "pytest --tb=short -q"
+  #   FastAPI app  → "python -m py_compile src/main.py"
+  #   Node/Next.js → "npm run lint" or "npm run build"
+  #
+  # last_checked: filled automatically by PetTron after each audit run.
+  #               Set to null to audit on the very next run.
+
+  - name: "juni2003/CrawlX-Data-Scrapping-Project"
+    branch: "main"
+    language: "python"
+    verify_cmd: "python -m compileall . -q"
+    last_checked: null
+
+  - name: "juni2003/NexusAI-Fashion-Assistant"
+    branch: "main"
+    language: "python"
+    verify_cmd: "python -m compileall . -q"
+    last_checked: null
+
+  - name: "juni2003/VisiHealthAI-Medical-Visual-Question-Answering"
+    branch: "main"
+    language: "python"
+    verify_cmd: "python -m compileall . -q"
+    last_checked: null
+
+  - name: "juni2003/Smart-Farming-Agentic-AI"
+    branch: "main"
+    language: "python"
+    verify_cmd: "python -m compileall . -q"
+    last_checked: null
+
+  - name: "juni2003/CareerNode"
+    branch: "main"
+    language: "javascript"
+    verify_cmd: "npm install --silent && npm run lint --if-present"
+    last_checked: null
+
+  - name: "juni2003/ai-jobtracker"
+    branch: "main"
+    language: "python"
+    verify_cmd: "python -m compileall . -q"
+    last_checked: null
+
+rotation:
+  # How many repos to audit per daily run.
+  # Keep at 1-2 to stay comfortably within Gemini free-tier RPM limits.
+  repos_per_run: 2
+
+  # If a repo already has an open PR created by this bot (branch starts with
+  # "bot/fix-"), skip it entirely this run to avoid duplicate PRs.
+  skip_if_open_bot_pr: true
+
