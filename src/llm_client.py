@@ -17,10 +17,11 @@ Usage:
     result: CodeAnalysisResult = client.analyze_code(files_content, schema=CodeAnalysisResult)
 """
 
-import os
-import time
 import json
 import logging
+import os
+import re
+import time
 from typing import Type, TypeVar
 
 from google import genai
@@ -134,56 +135,67 @@ class LLMClient:
     # ── Private helpers ────────────────────────────────────────────────────────
 
     def _call_gemini(self, prompt: str, schema: Type[T]) -> str:
-        """Call Gemini and return the raw text response."""
-        full_prompt = self._wrap_with_json_instruction(prompt, schema)
+        """Call Gemini with native structured JSON output schema."""
+        config = genai_types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_json_schema=schema.model_json_schema(),
+            temperature=0.2,
+        )
         response = self._gemini.models.generate_content(
             model=GEMINI_MODEL,
-            contents=full_prompt,
+            contents=prompt,
+            config=config,
         )
         return response.text
 
     def _call_groq(self, prompt: str, schema: Type[T]) -> str:
-        """Call Groq and return the raw text response."""
-        full_prompt = self._wrap_with_json_instruction(prompt, schema)
-        response = self._groq.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[{"role": "user", "content": full_prompt}],
-            temperature=0.2,
-            max_tokens=2048,
-        )
-        return response.choices[0].message.content
-
-    @staticmethod
-    def _wrap_with_json_instruction(prompt: str, schema: Type[T]) -> str:
-        """
-        Append a JSON format instruction to the prompt so the LLM knows
-        to respond with valid JSON matching the Pydantic schema.
-        """
-        schema_json = json.dumps(schema.model_json_schema(), indent=2)
-        return (
+        """Call Groq with JSON mode and schema."""
+        full_prompt = (
             f"{prompt}\n\n"
             "---\n"
-            "IMPORTANT: Respond with ONLY a valid JSON object. "
-            "No markdown, no code fences, no explanation. "
-            f"The JSON must conform to this schema:\n{schema_json}"
+            "Respond ONLY with a valid JSON object matching this schema:\n"
+            f"{json.dumps(schema.model_json_schema())}"
         )
+        response = self._groq.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that outputs only valid JSON conforming strictly to the requested schema.",
+                },
+                {"role": "user", "content": full_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_tokens=4096,
+        )
+        return response.choices[0].message.content
 
     @staticmethod
     def _parse(raw_text: str, schema: Type[T]) -> T:
         """
         Parse a raw LLM text response into the given Pydantic schema.
-        Strips any accidental markdown code fences before parsing.
+        Handles fences, markdown commentary, and extracts JSON objects cleanly.
         """
-        # Strip ```json ... ``` fences if the LLM added them anyway
         text = raw_text.strip()
-        if text.startswith("```"):
-            lines = text.splitlines()
-            # Remove first and last fence lines
-            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        # 1. Strip markdown fences if present
+        if "```" in text:
+            match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+            if match:
+                text = match.group(1).strip()
+
+        # 2. Extract substring between first '{' and last '}'
+        if not text.startswith("{") and "{" in text and "}" in text:
+            start = text.find("{")
+            end = text.rfind("}") + 1
+            text = text[start:end].strip()
 
         try:
             data = json.loads(text)
             return schema.model_validate(data)
         except (json.JSONDecodeError, ValidationError) as exc:
-            raise ValueError(f"Failed to parse LLM response into {schema.__name__}: {exc}\nRaw: {raw_text[:500]}")
+            raise ValueError(
+                f"Failed to parse LLM response into {schema.__name__}: {exc}\nRaw: {raw_text[:500]}"
+            )
 

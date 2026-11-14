@@ -193,12 +193,41 @@ class OpportunityScout:
         Send the top candidates + profile to the LLM.
         Ask it to rank and return the top 3 with drafted replies.
         """
-        candidates_text = json.dumps(candidates, indent=2)
-        profile_text = json.dumps(self.profile, indent=2)
+        # Take top 5 candidates and truncate bodies to keep prompt tight
+        condensed_candidates = []
+        for c in candidates[:5]:
+            condensed_candidates.append({
+                "url": c.get("url", ""),
+                "title": c.get("title", ""),
+                "repo": c.get("repo", ""),
+                "snippet": (c.get("body") or "")[:250],
+                "labels": c.get("labels", []),
+            })
+
+        # Compact profile context
+        condensed_profile = {
+            "name": self.profile.get("personal", {}).get("name", "Junaid Mohi-Ud-Din"),
+            "availability": self.profile.get("personal", {}).get("availability", ""),
+            "pricing": self.profile.get("personal", {}).get("pricing", {}),
+            "identity": self.profile.get("identity", ""),
+            "core_skills": self.profile.get("core_stack", {}),
+            "flagship_projects": [
+                {
+                    "name": p.get("name"),
+                    "tech": p.get("tech"),
+                    "highlights": p.get("highlights", [])[:2],
+                }
+                for p in self.profile.get("flagship_projects", [])[:4]
+            ],
+            "outreach_rules": self.profile.get("outreach_style", {}),
+        }
+
+        candidates_text = json.dumps(condensed_candidates, indent=2)
+        profile_text = json.dumps(condensed_profile, indent=2)
 
         prompt = f"""You are PetTron, an AI career assistant for a developer named Junaid Mohi-Ud-Din.
 
-Your task: From the GitHub issues below, select the TOP 3 that best match Junaid's skills
+Your task: From the candidate GitHub issues below, select the TOP 3 that best match Junaid's skills
 and would be most likely to result in a paid gig or collaboration. Then write a tailored,
 human-sounding reply draft for each one.
 
@@ -211,10 +240,10 @@ CANDIDATE GITHUB ISSUES:
 RULES FOR SELECTING OPPORTUNITIES:
   - Prioritise issues that explicitly mention compensation (bounty, paid, freelance, hiring).
   - Rank by: relevance to Junaid's stack > posting recency > likelihood of response.
-  - Skip issues that look like bug reports from non-paying users with no intention to hire.
+  - Skip issues that look like generic bug reports with no intention to hire.
 
 RULES FOR REPLY DRAFTS:
-  - Each reply must be CONCISE (3-5 short paragraphs max).
+  - Each reply must be CONCISE (2-3 short paragraphs max).
   - Start by acknowledging their SPECIFIC problem (not generic "I saw your post").
   - Mention exactly ONE of Junaid's projects that is directly relevant, with one real metric.
   - State availability (part-time / open to full-time) and pricing (flexible, $15-30/hr).
