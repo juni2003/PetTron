@@ -19,7 +19,7 @@ Responsible for:
 import logging
 from datetime import datetime, timezone
 
-from github import Github, GithubException
+from github import Github, GithubException, UnknownObjectException
 from github.Repository import Repository
 
 from src.schemas import OpportunityReport, PRRecord
@@ -75,13 +75,49 @@ class Notifier:
         )
 
         try:
-            repo: Repository = self.gh.get_repo(self.private_repo_name)
+            repo: Repository = self._get_or_create_repo()
             issue = repo.create_issue(title=title, body=body)
             logger.info(f"[Notifier] ✅ Digest issue created: {issue.html_url}")
             return issue.html_url
-        except GithubException as exc:
+        except Exception as exc:
             logger.error(f"[Notifier] Failed to create digest issue: {exc}")
             return ""
+
+    def _get_or_create_repo(self) -> Repository:
+        """
+        Get the target log repo. If it does not exist (404), automatically
+        create it as a private repository. If creation fails, fall back to
+        the main PetTron repository so the issue is never lost.
+        """
+        try:
+            repo = self.gh.get_repo(self.private_repo_name)
+            # Access an attribute to force checking existence
+            _ = repo.id
+            return repo
+        except (UnknownObjectException, GithubException) as exc:
+            logger.info(
+                f"[Notifier] Repo '{self.private_repo_name}' not found or inaccessible: {exc}. "
+                "Attempting to create it automatically as a private repository..."
+            )
+            try:
+                repo_name_only = self.private_repo_name.split("/")[-1]
+                user = self.gh.get_user()
+                repo = user.create_repo(
+                    name=repo_name_only,
+                    private=True,
+                    description="PetTron automated daily digest logs",
+                    auto_init=True,
+                )
+                logger.info(f"[Notifier] ✅ Created private repo: {repo.html_url}")
+                return repo
+            except Exception as create_exc:
+                logger.warning(
+                    f"[Notifier] Could not auto-create repo '{self.private_repo_name}': {create_exc}."
+                )
+
+        fallback_name = "juni2003/PetTron"
+        logger.info(f"[Notifier] Falling back to log issue in '{fallback_name}'")
+        return self.gh.get_repo(fallback_name)
 
     # ── Private helpers ────────────────────────────────────────────────────────
 

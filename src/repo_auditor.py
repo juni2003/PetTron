@@ -200,9 +200,10 @@ class RepoAuditor:
         Caps at MAX_FILES_PER_ANALYSIS to stay within LLM token limits.
         """
         try:
-            tree = repo.get_git_tree(branch, recursive=True).tree
+            branch_ref = repo.get_branch(branch)
+            tree = repo.get_git_tree(sha=branch_ref.commit.sha, recursive=True).tree
         except GithubException as exc:
-            raise RuntimeError(f"Could not read repo tree: {exc}") from exc
+            raise RuntimeError(f"Could not read repo tree for branch '{branch}': {exc}") from exc
 
         files_content: dict[str, str] = {}
 

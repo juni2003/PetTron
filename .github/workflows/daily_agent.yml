@@ -34,7 +34,9 @@ jobs:
       # ── 4. Run the main agent ──────────────────────────────────────────────
       - name: Run PetTron Agent
         env:
+          PYTHONUNBUFFERED: "1"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GH_PAT: ${{ secrets.GH_PAT }}
           PRIVATE_REPO_FOR_LOG: ${{ secrets.PRIVATE_REPO_FOR_LOG }}

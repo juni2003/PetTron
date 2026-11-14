@@ -64,7 +64,11 @@ class OpportunityScout:
         self.gh = gh
         self.llm = llm
         self.profile = self._load_profile(profile_path)
-        self._gh_token = self.gh.get_user().login  # Trigger auth check
+        try:
+            self._gh_token = self.gh.get_user().login
+        except Exception as e:
+            logger.warning(f"[Scout] GitHub user check notice: {e}")
+            self._gh_token = ""
         self._session = self._make_session()
 
     def run(self) -> OpportunityReport:
@@ -93,9 +97,10 @@ class OpportunityScout:
     def _make_session(self) -> requests.Session:
         """Create an authenticated requests.Session for the GitHub Search API."""
         import os
+        pat = os.environ.get("GH_PAT", "").strip()
         session = requests.Session()
         session.headers.update({
-            "Authorization": f"Bearer {os.environ['GH_PAT']}",
+            "Authorization": f"token {pat}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         })

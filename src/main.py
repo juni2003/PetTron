@@ -79,11 +79,13 @@ def save_json(path: Path, data: dict) -> None:
 
 
 def check_required_secrets() -> None:
-    """Fail fast if any required environment variable is missing."""
+    """Fail fast with clean diagnostic message if any required secret is missing."""
     required = ["GH_PAT", "GEMINI_API_KEY", "GROQ_API_KEY", "PRIVATE_REPO_FOR_LOG"]
-    missing = [k for k in required if not os.environ.get(k)]
+    missing = [k for k in required if not (os.environ.get(k) or "").strip()]
     if missing:
-        logging.critical(f"Missing required secrets: {missing}")
+        print(f"\n❌ [PetTron] CRITICAL: Missing required GitHub Secrets: {missing}", flush=True)
+        print("Please check: Repo -> Settings -> Secrets and variables -> Actions", flush=True)
+        print("Make sure each secret is created as a Repository secret and is not blank.\n", flush=True)
         sys.exit(1)
 
 
@@ -242,4 +244,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        import traceback
+        print(f"\n❌ [PetTron] Fatal unhandled exception in main:\n{exc}\n", flush=True)
+        traceback.print_exc()
+        sys.exit(1)

@@ -55,13 +55,17 @@ class LLMClient:
     """
 
     def __init__(self) -> None:
-        gemini_key = os.environ.get("GEMINI_API_KEY", "")
-        groq_key   = os.environ.get("GROQ_API_KEY", "")
+        gemini_key = (os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")).strip()
+        groq_key   = os.environ.get("GROQ_API_KEY", "").strip()
 
         if not gemini_key:
-            raise EnvironmentError("GEMINI_API_KEY environment variable is not set.")
+            raise EnvironmentError("GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable is not set.")
         if not groq_key:
             raise EnvironmentError("GROQ_API_KEY environment variable is not set.")
+
+        # Ensure both are set in environment for SDKs
+        os.environ["GEMINI_API_KEY"] = gemini_key
+        os.environ["GOOGLE_API_KEY"] = gemini_key
 
         self._gemini = genai.Client(api_key=gemini_key)
         self._groq   = Groq(api_key=groq_key)
