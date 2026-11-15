@@ -2,8 +2,9 @@
 opportunity_scout.py — PetTron Part B: Opportunity Scout
 ==========================================================
 Responsible for:
-  1. Querying the GitHub Search API with 5 targeted search queries
-     to find open freelance / help-wanted / bounty issues.
+  1. Querying the GitHub Search API with 5 targeted issue queries plus one
+     GraphQL query for Discussions, to find open freelance / help-wanted /
+     bounty / agentic-AI posts.
   2. Filtering raw results (remove stale, closed, locked, or spammy threads).
   3. Deduplicating across queries.
   4. Passing the top 10 results + the user's profile.json to the LLM.
@@ -42,12 +43,31 @@ SEARCH_SLEEP_SECS = 3
 
 SEARCH_QUERIES = [
     # Format: q=<search_terms> type:issue state:open created:>YYYY-MM-DD
-    'label:"help wanted" (FastAPI OR LangGraph OR RAG OR "agentic AI") language:Python',
+    'label:"help wanted" (FastAPI OR LangGraph OR RAG OR "agentic AI") language:Python type:issue state:open',
     '"looking for developer" (FastAPI OR Next.js OR Python) type:issue state:open',
     '"bounty" (Python OR FastAPI OR LLM OR RAG) type:issue state:open',
     '"freelance" (React OR Next.js OR FastAPI OR "full stack") type:issue state:open',
     '"hiring" (AI OR LLM OR "machine learning" OR Python) type:issue state:open',
 ]
+
+# GitHub Discussions are only reachable through GraphQL (no REST search).
+DISCUSSION_SEARCH_QUERY = """
+query($q: String!) {
+  search(query: $q, type: DISCUSSION, first: 5) {
+    nodes {
+      ... on Discussion {
+        title
+        url
+        createdAt
+        body
+        comments { totalCount }
+        repository { nameWithOwner }
+        labels(first: 5) { nodes { name } }
+      }
+    }
+  }
+}
+"""
 
 
 class OpportunityScout:
@@ -64,11 +84,6 @@ class OpportunityScout:
         self.gh = gh
         self.llm = llm
         self.profile = self._load_profile(profile_path)
-        try:
-            self._gh_token = self.gh.get_user().login
-        except Exception as e:
-            logger.warning(f"[Scout] GitHub user check notice: {e}")
-            self._gh_token = ""
         self._session = self._make_session()
 
     def run(self) -> OpportunityReport:
@@ -99,11 +114,14 @@ class OpportunityScout:
         import os
         pat = os.environ.get("GH_PAT", "").strip()
         session = requests.Session()
-        session.headers.update({
-            "Authorization": f"token {pat}",
+        headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-        })
+        }
+        # Never send "Authorization: token " (an empty token is a 401).
+        if pat:
+            headers["Authorization"] = f"token {pat}"
+        session.headers.update(headers)
         return session
 
     def _search_github(self) -> list[dict]:
@@ -138,21 +156,76 @@ class OpportunityScout:
             time.sleep(SEARCH_SLEEP_SECS)  # Respect GitHub's rate limits
 
         logger.info(f"[Scout] Collected {len(all_results)} candidate issue(s) after filtering.")
+
+        # GitHub Discussions are GraphQL-only, so they are searched separately.
+        # This is additive: if it fails, issue results are still used.
+        for item in self._search_discussions(cutoff):
+            if len(all_results) >= MAX_RAW_RESULTS:
+                break
+            if item["url"] in seen_urls:
+                continue
+            seen_urls.add(item["url"])
+            all_results.append(item)
+
+        logger.info(f"[Scout] Final candidate pool: {len(all_results)} item(s).")
         return all_results
 
-    def _run_search_query(self, query: str) -> list[dict]:
-        """Execute one GitHub Search API request and return items list."""
-        response = self._session.get(
-            "https://api.github.com/search/issues",
-            params={"q": query, "sort": "created", "order": "desc", "per_page": 10},
-            timeout=15,
+    def _search_discussions(self, cutoff: str) -> list[dict]:
+        """
+        Search GitHub Discussions for AI/automation hiring or help-wanted posts.
+
+        Discussions have no REST endpoint, so this uses GraphQL. Any failure
+        (missing scope, API change, network) is logged and ignored.
+        """
+        query = (
+            '("agentic AI" OR "AI automation" OR "help wanted" OR "freelance") '
+            f"created:>{cutoff}"
         )
-        if response.status_code == 403:
-            logger.warning("[Scout] GitHub Search API rate limit hit. Sleeping 60s ...")
-            time.sleep(60)
+        try:
+            _, data = self.gh.requester.graphql_query(
+                DISCUSSION_SEARCH_QUERY, {"q": query}
+            )
+        except Exception as exc:
+            logger.warning(f"[Scout] Discussion search skipped: {exc}")
             return []
-        response.raise_for_status()
-        return response.json().get("items", [])
+
+        nodes = ((data or {}).get("search") or {}).get("nodes") or []
+        results: list[dict] = []
+        for node in nodes:
+            if not isinstance(node, dict) or not node.get("url"):
+                continue
+            results.append({
+                "url":        node["url"],
+                "title":      node.get("title", ""),
+                "repo":       (node.get("repository") or {}).get("nameWithOwner", ""),
+                "body":       (node.get("body") or "")[:800],
+                "comments":   (node.get("comments") or {}).get("totalCount", 0),
+                "created_at": node.get("createdAt", ""),
+                "labels":     [
+                    l.get("name", "")
+                    for l in ((node.get("labels") or {}).get("nodes") or [])
+                    if isinstance(l, dict)
+                ],
+            })
+
+        logger.info(f"[Scout] Discussion search returned {len(results)} candidate(s).")
+        return results
+
+    def _run_search_query(self, query: str) -> list[dict]:
+        """Execute one GitHub Search API request, retrying once on rate limit."""
+        for attempt in (1, 2):
+            response = self._session.get(
+                "https://api.github.com/search/issues",
+                params={"q": query, "sort": "created", "order": "desc", "per_page": 10},
+                timeout=15,
+            )
+            if response.status_code == 403 and attempt == 1:
+                logger.warning("[Scout] GitHub Search API rate limit hit. Sleeping 60s ...")
+                time.sleep(60)
+                continue
+            response.raise_for_status()
+            return response.json().get("items", [])
+        return []
 
     @staticmethod
     def _passes_filter(item: dict) -> bool:
@@ -185,7 +258,7 @@ class OpportunityScout:
             "body":       (item.get("body") or "")[:800],   # Truncate long descriptions
             "comments":   item.get("comments", 0),
             "created_at": item.get("created_at", ""),
-            "labels":     [l["name"] for l in item.get("labels", [])],
+            "labels":     [l.get("name", "") for l in item.get("labels", []) if isinstance(l, dict)],
         }
 
     def _rank_and_draft(self, candidates: list[dict]) -> OpportunityReport:
@@ -246,7 +319,7 @@ RULES FOR REPLY DRAFTS:
   - Each reply must be CONCISE (2-3 short paragraphs max).
   - Start by acknowledging their SPECIFIC problem (not generic "I saw your post").
   - Mention exactly ONE of Junaid's projects that is directly relevant, with one real metric.
-  - State availability (part-time / open to full-time) and pricing (flexible, $15-30/hr).
+  - State availability and pricing using ONLY the values in Junaid's profile above — never invent a rate.
   - End with a clear, low-pressure call to action ("happy to share my portfolio / schedule a call").
   - Do NOT start with "I am a developer looking for work." — that's spam.
   - Sound like a confident, helpful engineer, not a job seeker.
