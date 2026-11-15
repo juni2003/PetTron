@@ -23,7 +23,7 @@ import logging
 import os
 import sys
 import time
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 
 # Ensure repo root is always on sys.path so 'from src.xxx' works anywhere
@@ -93,6 +93,18 @@ def check_required_secrets() -> None:
         print("Make sure each secret is created as a Repository secret and is not blank.\n", flush=True)
         sys.exit(1)
 
+    # A secret pasted with surrounding quotes or a trailing newline looks valid
+    # to this check but fails authentication later (401/400). Clean it up and say so.
+    for key in required:
+        raw = os.environ.get(key, "")
+        cleaned = raw.strip().strip('"').strip("'").strip()
+        if cleaned != raw:
+            os.environ[key] = cleaned
+            print(
+                f"⚠️  [PetTron] Secret '{key}' had stray whitespace/quotes — cleaned automatically.",
+                flush=True,
+            )
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
@@ -132,14 +144,20 @@ def main() -> None:
     repos_no_issue:  list[str]      = []
     repos_skipped:   list[str]      = []
     run_errors:      list[str]      = []
-    llm_used:        str            = "gemini-2.0-flash"
+    audit_results:   list           = []
 
     auditor  = RepoAuditor(gh, llm, repos_config, run_state)
     verifier = Verifier(gh, llm)
     pr_mgr   = PRManager(gh)
 
-    audit_results = auditor.run()
-    repos_skipped = auditor.skipped_repos
+    # A failure in Part A must never stop Part B or the daily digest.
+    try:
+        audit_results = auditor.run()
+        repos_skipped = auditor.skipped_repos
+    except Exception as exc:
+        msg = f"Repo Auditor failed: {exc}"
+        logger.error(f"[Main] ❌ {msg}")
+        run_errors.append(msg)
 
     for repo_name, repo_cfg, analysis in audit_results:
         if not analysis.issue_found:
@@ -153,14 +171,16 @@ def main() -> None:
         )
 
         try:
-            patched_content, branch_name = verifier.apply_and_verify(
+            patched_content, branch_name, final_analysis = verifier.apply_and_verify(
                 repo_name, repo_cfg, analysis
             )
             logger.info(f"[Main] Verification passed. Opening PR on {repo_name} ...")
             pr_record = pr_mgr.create_pr(
                 repo_name=repo_name,
                 branch_name=branch_name,
-                analysis=analysis,
+                # Use the analysis that was actually applied (it may have been
+                # self-corrected by the LLM after a failed verify run).
+                analysis=final_analysis,
                 patched_content=patched_content,
             )
             prs_opened.append(pr_record)
@@ -202,6 +222,9 @@ def main() -> None:
     logger.info("─" * 40)
 
     duration_secs = time.monotonic() - start_time
+    # Report the model that actually answered (e.g. "gemini:gemini-2.0-flash"
+    # or "groq:llama-3.1-8b-instant") instead of a hard-coded guess.
+    llm_used = llm.last_provider or "not-called"
 
     try:
         notifier = Notifier(gh, private_repo_name)
@@ -214,7 +237,12 @@ def main() -> None:
             duration_secs=duration_secs,
             llm_used=llm_used,
         )
-        logger.info(f"[Main] ✅ Digest sent: {digest_url}")
+        if digest_url:
+            logger.info(f"[Main] ✅ Digest sent: {digest_url}")
+        else:
+            logger.warning(
+                "[Main] ⚠️  Digest could not be posted — see the Notifier log above."
+            )
     except Exception as exc:
         logger.error(f"[Main] ❌ Failed to send digest: {exc}")
 
@@ -233,9 +261,15 @@ def main() -> None:
     run_state["last_run_date"]     = today
     run_state["repos_checked_today"] = [r for r, _, _ in audit_results]
     run_state["prs_opened_today"]  = [p.model_dump() for p in prs_opened]
-    run_state.setdefault("run_history", []).append(run_summary)
-    # Keep only last 30 days of history to avoid state file bloat
-    run_state["run_history"] = run_state["run_history"][-30:]
+    # Replace any earlier entry for today (manual re-runs), drop older
+    # duplicates left by previous runs, and keep the last 30 days.
+    by_date = {
+        h["run_date"]: h
+        for h in run_state.get("run_history", [])
+        if isinstance(h, dict) and h.get("run_date")
+    }
+    by_date[today] = run_summary
+    run_state["run_history"] = [by_date[d] for d in sorted(by_date)][-30:]
 
     save_json(STATE_FILE, run_state)
     save_yaml(REPOS_YAML, repos_config)   # Saves updated last_checked dates

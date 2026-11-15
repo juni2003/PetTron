@@ -14,6 +14,8 @@ This file never touches .github/workflows/ or .env files (enforced by FORBIDDEN_
 
 import logging
 import os
+import posixpath
+import re
 import shutil
 import subprocess
 import tempfile
@@ -71,12 +73,16 @@ class Verifier:
         repo_name: str,
         repo_cfg: dict,
         analysis: CodeAnalysisResult,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, CodeAnalysisResult]:
         """
         Clone the repo, apply the patch, run verify_cmd.
 
         Returns:
-            (patched_file_content, branch_name)
+            (patched_file_content, branch_name, analysis_used)
+
+            ``analysis_used`` is the *corrected* analysis when the LLM had to
+            fix its own patch, so the caller opens the PR against the file that
+            was actually patched.
 
         Raises:
             VerificationError: if both attempts fail (caller should abort).
@@ -85,6 +91,9 @@ class Verifier:
             raise VerificationError("Analysis result is missing patch fields — cannot verify.")
 
         self._check_forbidden(analysis.target_file)
+        # Brand-new files must respect the same safety rules as the target file.
+        for new_file in analysis.new_files:
+            self._check_forbidden(new_file.path)
 
         # Work in a temp directory that is always cleaned up
         tmpdir = tempfile.mkdtemp(prefix="pettron_")
@@ -99,8 +108,25 @@ class Verifier:
 
     def _check_forbidden(self, target_file: str) -> None:
         """Raise VerificationError if the target file is in a forbidden path."""
+        if not target_file or not str(target_file).strip():
+            raise VerificationError("[Safety] Refusing to patch an empty path.")
+
+        # Normalise Windows separators, "./" prefixes and ".." traversal so
+        # that './.github/workflows/x.yml' and 'src/../.env' cannot slip past.
+        raw = str(target_file).replace("\\", "/").strip()
+        normalized = posixpath.normpath(raw).lstrip("/").lower()
+        if normalized in ("", "."):
+            raise VerificationError(f"[Safety] Refusing to patch invalid path: {target_file}")
+        if normalized == ".." or normalized.startswith("../"):
+            raise VerificationError(
+                f"[Safety] Refusing to patch a path outside the repository: {target_file}"
+            )
+
+        parts = [p for p in normalized.split("/") if p]
+
         for forbidden in FORBIDDEN_PATHS:
-            if target_file.startswith(forbidden) or target_file == forbidden:
+            f = forbidden.lower()
+            if normalized == f or normalized.startswith(f + "/") or f in parts:
                 raise VerificationError(
                     f"[Safety] Refusing to patch forbidden path: {target_file}"
                 )
@@ -109,23 +135,45 @@ class Verifier:
         """
         Clone the target repo using the GH_PAT for authentication.
         Returns the path to the cloned repo root.
+
+        The PAT is never written to logs or error messages — git can echo the
+        remote URL on failure, so all output is scrubbed with ``_redact``.
         """
-        pat = os.environ["GH_PAT"]
+        pat = (os.environ.get("GH_PAT") or "").strip()
+        if not pat:
+            raise VerificationError("GH_PAT is not set — cannot clone the target repo.")
+
         clone_url = f"https://{pat}@github.com/{repo_name}.git"
         repo_dir = Path(into_dir) / repo_name.split("/")[-1]
 
         logger.info(f"[Verifier] Cloning {repo_name} (branch={branch}) ...")
-        result = subprocess.run(
-            ["git", "clone", "--depth=1", "--branch", branch, clone_url, str(repo_dir)],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
+        try:
+            result = subprocess.run(
+                ["git", "clone", "--depth=1", "--branch", branch, clone_url, str(repo_dir)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise VerificationError(f"Git clone timed out for {repo_name}") from exc
+
         if result.returncode != 0:
-            raise VerificationError(f"Git clone failed: {result.stderr[:500]}")
+            raise VerificationError(
+                f"Git clone failed: {self._redact(result.stderr or result.stdout)[:500]}"
+            )
 
         logger.info(f"[Verifier] Cloned to: {repo_dir}")
         return repo_dir
+
+    @staticmethod
+    def _redact(text: str) -> str:
+        """Remove any token/credential pattern from text before logging it."""
+        if not text:
+            return ""
+        # Scrub 'user:token@host' and bare long tokens.
+        text = re.sub(r"//[^@/\s]+@", "//***@", text)
+        text = re.sub(r"(gh[pousr]_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9_]{10,})", "***", text)
+        return text
 
     def _attempt_verify(
         self,
@@ -134,10 +182,13 @@ class Verifier:
         repo_cfg: dict,
         analysis: CodeAnalysisResult,
         attempt: int,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, CodeAnalysisResult]:
         """
         Apply patch, run verify_cmd. If it fails and attempt==1, ask LLM to fix it.
         """
+        # Re-check on every attempt: a self-corrected analysis is new LLM output.
+        self._check_forbidden(analysis.target_file)
+
         target_path = repo_dir / analysis.target_file
         if not target_path.exists():
             raise VerificationError(
@@ -154,9 +205,16 @@ class Verifier:
         except PatchError as exc:
             raise VerificationError(str(exc))
 
-        # Write any new files the LLM wants to create
+        # Write any new files the LLM wants to create. Skip paths that already
+        # exist (they are edits, not new files) and never clobber a directory.
         for new_file in analysis.new_files:
+            self._check_forbidden(new_file.path)
             new_path = repo_dir / new_file.path
+            if new_path.exists():
+                logger.warning(
+                    f"[Verifier] Skipping new_file '{new_file.path}' — it already exists."
+                )
+                continue
             new_path.parent.mkdir(parents=True, exist_ok=True)
             new_path.write_text(new_file.content, encoding="utf-8")
             logger.info(f"[Verifier] Created new file: {new_file.path}")
@@ -165,24 +223,32 @@ class Verifier:
         verify_cmd = repo_cfg.get("verify_cmd", "python -m compileall . -q")
         logger.info(f"[Verifier] Running verify_cmd (attempt {attempt}): {verify_cmd}")
 
-        verify_result = subprocess.run(
-            verify_cmd,
-            shell=True,
-            cwd=str(repo_dir),
-            capture_output=True,
-            text=True,
-            timeout=MAX_VERIFY_TIMEOUT_SECS,
-        )
+        try:
+            verify_result = subprocess.run(
+                verify_cmd,
+                shell=True,
+                cwd=str(repo_dir),
+                capture_output=True,
+                text=True,
+                timeout=MAX_VERIFY_TIMEOUT_SECS,
+            )
+        except subprocess.TimeoutExpired:
+            # Treat a hung verify command as a normal verification failure so
+            # the self-correction path still gets a chance to run.
+            error_output = f"verify_cmd timed out after {MAX_VERIFY_TIMEOUT_SECS}s"
+            logger.warning(f"[Verifier] ❌ {error_output} (attempt {attempt})")
+            verify_result = None
 
-        if verify_result.returncode == 0:
+        if verify_result is not None and verify_result.returncode == 0:
             logger.info(f"[Verifier] ✅ Verification passed on attempt {attempt}.")
             # Return the final patched content of the target file
             final_content = target_path.read_text(encoding="utf-8")
             branch_name = self._make_branch_name(analysis)
-            return final_content, branch_name
+            return final_content, branch_name, analysis
 
         # ── Verification failed ────────────────────────────────────────────
-        error_output = (verify_result.stdout + verify_result.stderr)[:2000]
+        if verify_result is not None:
+            error_output = (verify_result.stdout + verify_result.stderr)[:2000]
         logger.warning(f"[Verifier] ❌ Verification failed (attempt {attempt}):\n{error_output}")
 
         if attempt >= 2:
@@ -198,10 +264,32 @@ class Verifier:
         if not corrected.issue_found or not corrected.search_block:
             raise VerificationError("LLM could not produce a corrected patch.")
 
-        # Reset target file to original before retry
-        self._clone_repo(repo_name, repo_cfg["branch"], str(repo_dir.parent))
+        # Roll the working tree back to the pristine clone before retrying.
+        # (Re-cloning into the same directory fails because it already exists.)
+        self._reset_worktree(repo_dir)
 
         return self._attempt_verify(repo_dir, repo_name, repo_cfg, corrected, attempt=2)
+
+    @staticmethod
+    def _reset_worktree(repo_dir: Path) -> None:
+        """
+        Discard all local changes in *repo_dir* so the next attempt starts from
+        the original clone: revert tracked files and remove untracked ones
+        (including any new files a previous attempt created).
+        """
+        for cmd in (
+            ["git", "checkout", "--", "."],
+            ["git", "clean", "-fd"],
+        ):
+            result = subprocess.run(
+                cmd, cwd=str(repo_dir), capture_output=True, text=True, timeout=60
+            )
+            if result.returncode != 0:
+                logger.warning(
+                    "[Verifier] Worktree reset command %s failed: %s",
+                    cmd,
+                    (result.stderr or "").strip()[:200],
+                )
 
     def _ask_llm_to_correct(
         self, original: CodeAnalysisResult, error_output: str
@@ -261,7 +349,6 @@ Please analyse the error and provide a CORRECTED patch.
         Slugifies the pr_title for readability.
         """
         from datetime import date
-        import re
 
         today = date.today().strftime("%Y%m%d")
         title = analysis.pr_title or analysis.category or "patch"

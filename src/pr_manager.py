@@ -13,7 +13,7 @@ which is clean, authenticated automatically via GH_PAT, and works in GitHub Acti
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from github import Github, GithubException, UnknownObjectException
 from github.Repository import Repository
@@ -68,8 +68,8 @@ class PRManager:
         """
         repo: Repository = self.gh.get_repo(repo_name)
 
-        # 1. Create the branch from the tip of main
-        self._create_branch(repo, branch_name, base_branch=analysis.target_file and "main" or "main")
+        # 1. Create the branch from the tip of the repo's default branch
+        self._create_branch(repo, branch_name, base_branch=repo.default_branch)
 
         # 2. Commit the patched file
         self._commit_file(repo, branch_name, analysis.target_file, patched_content)
@@ -92,7 +92,7 @@ class PRManager:
             pr_title=analysis.pr_title or "PetTron automated fix",
             category=analysis.category or "general",
             severity=analysis.severity or "low",
-            opened_at=datetime.utcnow().isoformat(),
+            opened_at=datetime.now(timezone.utc).isoformat(),
         )
 
     # ── Private helpers ────────────────────────────────────────────────────────
@@ -141,17 +141,36 @@ class PRManager:
         file_path: str,
         content: str,
     ) -> None:
-        """Create a brand-new file in the branch."""
+        """
+        Create a brand-new file in the branch. If the path already exists on the
+        branch (e.g. the LLM picked a name that already exists), update it
+        instead of failing the whole PR.
+        """
         try:
-            repo.create_file(
-                path=file_path,
-                message=f"feat: PetTron creates {file_path}",
-                content=content,
-                branch=branch_name,
-            )
-            logger.info(f"[PRManager] Created new file: {file_path}")
+            try:
+                existing = repo.get_contents(file_path, ref=branch_name)
+            except UnknownObjectException:
+                existing = None
+
+            if existing is not None:
+                repo.update_file(
+                    path=file_path,
+                    message=f"chore: PetTron updates {file_path}",
+                    content=content,
+                    sha=existing.sha,
+                    branch=branch_name,
+                )
+                logger.info(f"[PRManager] Updated existing file: {file_path}")
+            else:
+                repo.create_file(
+                    path=file_path,
+                    message=f"feat: PetTron creates {file_path}",
+                    content=content,
+                    branch=branch_name,
+                )
+                logger.info(f"[PRManager] Created new file: {file_path}")
         except GithubException as exc:
-            logger.warning(f"[PRManager] Could not create {file_path}: {exc}")
+            logger.warning(f"[PRManager] Could not commit {file_path}: {exc}")
 
     def _ensure_labels(self, repo: Repository, category: str | None) -> None:
         """Create the required labels on the target repo if they don't exist."""
@@ -198,9 +217,9 @@ class PRManager:
             base=base_branch,
         )
 
-        # Add labels
+        # Add labels (only ones we know exist — unknown categories are skipped)
         labels_to_add = [BOT_LABEL]
-        if analysis.category:
+        if analysis.category and analysis.category in LABEL_COLORS:
             labels_to_add.append(analysis.category)
         try:
             pr.add_to_labels(*labels_to_add)

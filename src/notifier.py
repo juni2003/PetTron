@@ -17,6 +17,7 @@ Responsible for:
 """
 
 import logging
+import os
 from datetime import datetime, timezone
 
 from github import Github, GithubException, UnknownObjectException
@@ -76,12 +77,30 @@ class Notifier:
 
         try:
             repo: Repository = self._get_or_create_repo()
+            existing = self._find_existing_digest(repo, title)
+            if existing is not None:
+                # A manual re-run on the same day: append instead of spamming
+                # a second digest issue.
+                comment = existing.create_comment(body)
+                logger.info(f"[Notifier] ✅ Appended to today's digest: {comment.html_url}")
+                return existing.html_url
             issue = repo.create_issue(title=title, body=body)
             logger.info(f"[Notifier] ✅ Digest issue created: {issue.html_url}")
             return issue.html_url
         except Exception as exc:
             logger.error(f"[Notifier] Failed to create digest issue: {exc}")
             return ""
+
+    @staticmethod
+    def _find_existing_digest(repo: Repository, title: str):
+        """Return the open digest issue for *title*, if one already exists."""
+        try:
+            for issue in repo.get_issues(state="open"):
+                if issue.pull_request is None and issue.title == title:
+                    return issue
+        except Exception as exc:
+            logger.warning(f"[Notifier] Could not check for an existing digest: {exc}")
+        return None
 
     def _get_or_create_repo(self) -> Repository:
         """
@@ -124,7 +143,7 @@ class Notifier:
                     f"[Notifier] Could not auto-create repo '{target}': {create_exc}."
                 )
 
-        fallback_name = "juni2003/PetTron"
+        fallback_name = os.environ.get("GITHUB_REPOSITORY", "juni2003/PetTron")
         logger.info(f"[Notifier] Falling back to log issue in '{fallback_name}'")
         return self.gh.get_repo(fallback_name)
 
