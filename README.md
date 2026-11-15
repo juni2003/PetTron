@@ -120,6 +120,36 @@ pytest tests/ -v
 
 ---
 
+## Troubleshooting the LLM (Gemini / Groq)
+
+If `state/run_state.json` shows
+`Opportunity Scout failed: Both Gemini and Groq failed after all retries`,
+run the self-test first — it tells you in seconds whether the problem is a
+key, a retired model, or a schema:
+
+```bash
+# locally
+export GEMINI_API_KEY=... GROQ_API_KEY=...
+python -m src.llm_client
+```
+
+Or on GitHub: **Actions → PetTron Daily Agent → Run workflow** and tick
+`diagnose_llm`. The self-test runs before the agent, so the log shows exactly
+which provider/model failed and with what error.
+
+Common causes:
+
+| Symptom in the log | Fix |
+|---|---|
+| `API key not valid` / `401` | Re-paste the secret in **Settings → Secrets** (stray spaces or quotes are stripped automatically now) |
+| `404 NOT_FOUND` / `model not found` | The model was retired — update `GEMINI_MODELS` in `src/llm_client.py` |
+| `400 INVALID_ARGUMENT` | Schema mismatch: pass `response_schema=<Pydantic class>`, never a raw `model_json_schema()` dict |
+
+Non-retryable errors (400/401/403, bad key) now fail in one attempt instead of
+burning ~2 minutes of exponential backoff before the fallback is tried.
+
+---
+
 ## Free Tier Limits (why this stays free forever)
 
 | Resource | Limit | PetTron's daily usage |
@@ -160,6 +190,10 @@ PetTron/
 │   └── notifier.py                     # Daily digest GitHub Issue
 ├── state/run_state.json                # Rotation state (auto-updated daily)
 ├── tests/test_patcher.py               # Unit tests for patching logic
+├── tests/test_llm.py                   # LLM client: schema, fallback, retries, live self-test
+├── tests/test_verifier.py              # Forbidden paths, secret redaction, patching
+├── tests/test_opportunity_scout.py     # Search filters, dedupe, Discussions, prompts
+├── tests/test_notifier.py              # Digest formatting + one-issue-per-day
 └── requirements.txt
 ```
 
