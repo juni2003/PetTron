@@ -142,11 +142,34 @@ Common causes:
 | Symptom in the log | Fix |
 |---|---|
 | `API key not valid` / `401` | Re-paste the secret in **Settings → Secrets** (stray spaces or quotes are stripped automatically now) |
-| `404 NOT_FOUND` / `model not found` | The model was retired — update `GEMINI_MODELS` in `src/llm_client.py` |
+| `404 NOT_FOUND` / `model not found` | The model id was retired. Handled automatically: the client lists the models your key can use and continues (see below) |
+| `JSON mode is not enabled for api version v1` | Fixed — the client pins `v1beta`, which is the only version that serves structured output |
 | `400 INVALID_ARGUMENT` | Schema mismatch: pass `response_schema=<Pydantic class>`, never a raw `model_json_schema()` dict |
 
 Non-retryable errors (400/401/403, bad key) now fail in one attempt instead of
-burning ~2 minutes of exponential backoff before the fallback is tried.
+burning ~2 minutes of exponential backoff before the fallback is tried. A
+rejected API key stops that provider at once instead of trying every model.
+
+### Model ids are preferences, not requirements
+
+Google and Groq retire model ids without notice (`gemini-2.0-flash` and
+`llama-3.1-8b-instant` are already gone). The first time a configured model
+answers `404`, the client calls `models.list()`, keeps the chat-capable Gemini
+models (embeddings, image, TTS and similar are filtered out) and retries with
+those. Nothing has to be edited for a retired model, and discovery costs one
+extra request per run at most.
+
+To pin models yourself, set any of these — comma-separated for the lists:
+
+| Variable | Default |
+|---|---|
+| `GEMINI_MODEL` | `gemini-2.5-flash` |
+| `GEMINI_FALLBACK_MODELS` | `gemini-3.8-flash,gemini-flash-latest` |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` |
+| `GROQ_FALLBACK_MODELS` | `llama-3.1-8b-instant,openai/gpt-oss-20b` |
+| `GEMINI_API_VERSION` | `v1beta` (do not change: `v1` refuses JSON mode) |
+
+Blank values are ignored, so an unset GitHub Actions `vars` entry is safe.
 
 ---
 
