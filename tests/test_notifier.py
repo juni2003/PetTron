@@ -181,3 +181,37 @@ class TestFailedAudits(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestOpportunityKindLabel(unittest.TestCase):
+    """A discussion is not an issue: the draft is posted somewhere else."""
+
+    def _body(self, url):
+        opp = OpportunityDraft(
+            issue_url=url,
+            issue_title="Looking for an AI agent dev",
+            repo_name="o/r",
+            match_score=9,
+            match_reason="agentic work",
+            reply_draft="Hi — I can help.",
+        )
+        return Notifier._build_body(
+            today="2026-11-15",
+            prs_opened=[],
+            repos_skipped=[],
+            repos_no_issue=[],
+            opportunity_report=OpportunityReport(opportunities=[opp]),
+            run_errors=[],
+            duration_secs=2.0,
+            llm_used="gemini:gemini-2.5-flash",
+        )
+
+    def test_discussion_is_labelled_discussion(self):
+        body = self._body("https://github.com/o/r/discussions/18")
+        self.assertIn("**Discussion:**", body)
+        self.assertNotIn("**Issue:**", body)
+
+    def test_issue_is_labelled_issue(self):
+        body = self._body("https://github.com/o/r/issues/18")
+        self.assertIn("**Issue:**", body)
+        self.assertNotIn("**Discussion:**", body)
