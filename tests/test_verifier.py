@@ -8,6 +8,7 @@ secret redaction, and exact-match patching. No network or git is needed.
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from src.schemas import CodeAnalysisResult
 from src.verifier import PatchError, VerificationError, Verifier
@@ -114,3 +115,86 @@ class TestBranchName(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPatchMismatchSelfCorrection(unittest.TestCase):
+    """
+    Regression: a hallucinated search_block used to abort the PR outright with
+    "search_block not found verbatim". The LLM now gets the real file and one
+    chance to redo the patch.
+    """
+
+    FILE = "def total(xs):\n    return sum(xs)\n"
+
+    def _repo(self, tmp: str) -> Path:
+        repo = Path(tmp) / "repo"
+        repo.mkdir()
+        (repo / "app.py").write_text(self.FILE, encoding="utf-8")
+        return repo
+
+    def _analysis(self, search: str, replace: str) -> CodeAnalysisResult:
+        return CodeAnalysisResult(
+            issue_found=True,
+            category="bug",
+            severity="low",
+            target_file="app.py",
+            search_block=search,
+            replace_block=replace,
+            pr_title="fix: guard empty input",
+            reasoning="test",
+        )
+
+    def test_wrong_block_is_retried_with_the_real_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo(tmp)
+            llm = mock.MagicMock()
+            llm.call.return_value = self._analysis(self.FILE, "def total(xs):\n    return sum(xs or [])\n")
+            verifier = Verifier(gh=None, llm=llm)
+
+            content, branch, used = verifier._attempt_verify(
+                repo,
+                "o/r",
+                {"verify_cmd": "python -m compileall . -q"},
+                self._analysis("def total(xs):\n  return sum(xs)\n", "def total(xs):\n    return 0\n"),
+                attempt=1,
+            )
+
+            self.assertIn("sum(xs or [])", content)
+            self.assertTrue(branch.startswith("bot/fix-"))
+            self.assertEqual(used.search_block, self.FILE)
+            prompt = llm.call.call_args[0][0]
+            self.assertIn(self.FILE.strip(), prompt)
+            self.assertIn("NOT found in the file", prompt)
+
+    def test_still_wrong_after_correction_gives_up(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo(tmp)
+            llm = mock.MagicMock()
+            llm.call.return_value = self._analysis("still not in the file", "x = 1\n")
+            verifier = Verifier(gh=None, llm=llm)
+
+            with self.assertRaises(VerificationError):
+                verifier._attempt_verify(
+                    repo,
+                    "o/r",
+                    {"verify_cmd": "python -m compileall . -q"},
+                    self._analysis("not in the file", "x = 1\n"),
+                    attempt=1,
+                )
+            self.assertEqual(len(llm.call.call_args_list), 1)
+
+    def test_llm_declining_the_fix_gives_up(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo(tmp)
+            llm = mock.MagicMock()
+            llm.call.return_value = CodeAnalysisResult(issue_found=False, reasoning="cannot")
+            verifier = Verifier(gh=None, llm=llm)
+
+            with self.assertRaises(VerificationError):
+                verifier._attempt_verify(
+                    repo,
+                    "o/r",
+                    {"verify_cmd": "python -m compileall . -q"},
+                    self._analysis("not in the file", "x = 1\n"),
+                    attempt=1,
+                )
