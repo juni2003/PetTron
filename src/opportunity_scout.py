@@ -35,8 +35,12 @@ SEARCH_WINDOW_DAYS = 7
 # Skip issues with more than this many comments (too crowded, low chance of success)
 MAX_COMMENTS = 15
 
-# Max results to collect total before passing to LLM for ranking
+# Max *issue* results to collect before passing to LLM for ranking
 MAX_RAW_RESULTS = 10
+
+# Discussions get their own budget on top of the issues, so a full issue pool
+# can no longer push every discussion out of the ranking.
+MAX_DISCUSSION_RESULTS = 4
 
 # Courtesy sleep between GitHub Search API calls (in seconds)
 SEARCH_SLEEP_SECS = 3
@@ -159,13 +163,15 @@ class OpportunityScout:
 
         # GitHub Discussions are GraphQL-only, so they are searched separately.
         # This is additive: if it fails, issue results are still used.
+        discussions = 0
         for item in self._search_discussions(cutoff):
-            if len(all_results) >= MAX_RAW_RESULTS:
+            if discussions >= MAX_DISCUSSION_RESULTS:
                 break
             if item["url"] in seen_urls:
                 continue
             seen_urls.add(item["url"])
             all_results.append(item)
+            discussions += 1
 
         logger.info(f"[Scout] Final candidate pool: {len(all_results)} item(s).")
         return all_results
