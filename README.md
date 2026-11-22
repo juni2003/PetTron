@@ -148,6 +148,7 @@ Common causes:
 | `429 RESOURCE_EXHAUSTED` / `Quota exceeded ... limit: 20` | Free-tier daily quota for that model is gone (it resets on Google's clock, often ~12h). The client now treats quota errors as non-retryable and moves to the next model instead of sleeping. Add billing or set `GEMINI_MODEL` to a model with quota left |
 | `413 Request too large` / `tokens per minute (TPM): Limit 8000` | The audit prompt outgrew Groq's free-tier limit. Now capped at 6 files × 2200 chars (`MAX_FILES_PER_ANALYSIS`, `MAX_CHARS_PER_FILE` in `src/repo_auditor.py`); raise them only if your key is on a paid tier |
 | `verify_cmd fails on the unmodified repo` | The repo's `verify_cmd` is broken before any patch, so PetTron cannot judge a patch. Fix `config/repos.yaml`, or set `baseline_verify: false` for that repo to skip the check |
+| `patched <file> does not parse` / `matches <file> only in the middle of a line` | The patch was refused on purpose: a `search_block` must quote whole lines, and the patched Python file must still compile. The bot asks the model once more for a correct block instead of opening a PR with broken code. |
 
 Non-retryable errors (400/401/403, bad key, 429/quota) now fail in one attempt
 instead of burning ~2 minutes of exponential backoff before the fallback is
@@ -167,9 +168,16 @@ A model sometimes re-types the code instead of copying it, so an exact
 
 Before any patch is applied, `verify_cmd` is run on the pristine clone, so a
 repo whose checks were already broken is reported as such instead of looking
-like a patch the bot broke.
+like a patch the bot broke. Bytecode caches are deleted before every run: the
+baseline leaves `__pycache__` behind, and `compileall` decides freshness from
+the source mtime in whole seconds, so a patch written in the same second as the
+baseline was never recompiled and a broken file "passed".
 
-| `patched <file> does not parse` / `matches <file> only in the middle of a line` | The patch was refused on purpose: a `search_block` must quote whole lines, and the patched Python file must still compile. The bot asks the model once more for a correct block instead of opening a PR with broken code. |
+`verify_cmd` is the only behavioural gate, so a default of
+`python -m compileall . -q` proves the patch parses and nothing more. Give a
+repo a real command in `config/repos.yaml` (`verify_cmd: "pytest -q"`) if you
+want the bot's PRs held to the repo's own tests.
+
 ### A failed audit no longer looks like a clean day
 
 When the LLM could not analyse a repo, `repo_auditor` used to record it as

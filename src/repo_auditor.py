@@ -309,6 +309,11 @@ RULES:
     a return value or an API call. Rewording a docstring, comment or user-facing
     message is NOT a fix and will be rejected.
   - Never use JavaScript literals in Python: write True / False / None.
+  - Keep the app working: a patch must not disable or lock down an existing
+    route, and when it reads a new setting from the environment the app must
+    still run with that variable unset (a missing API_KEY must not 401 every
+    request). Only the repo's own verify_cmd checks the patch, so a change no
+    test can exercise belongs in the PR description, not in the code.
   - The search_block must be an EXACT copy of the lines you want to replace
     (copy-paste from the file content above, preserve indentation exactly).
   - The replace_block must be a complete, correct drop-in replacement.
