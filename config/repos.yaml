@@ -21,12 +21,12 @@ repositories:
   verify_cmd: python -m compileall . -q
 - branch: main
   language: javascript
-  last_checked: null
+  last_checked: '2026-11-22'
   name: juni2003/CareerNode
   verify_cmd: npm install --silent && npm run lint --if-present
 - branch: main
   language: python
-  last_checked: null
+  last_checked: '2026-11-22'
   name: juni2003/ai-jobtracker
   verify_cmd: python -m compileall . -q
 rotation:

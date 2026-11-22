@@ -2,10 +2,19 @@
   "last_run_date": "2026-11-22",
   "repo_rotation_index": 0,
   "repos_checked_today": [
-    "juni2003/VisiHealthAI-Medical-Visual-Question-Answering",
-    "juni2003/Smart-Farming-Agentic-AI"
+    "juni2003/CareerNode",
+    "juni2003/ai-jobtracker"
   ],
-  "prs_opened_today": [],
+  "prs_opened_today": [
+    {
+      "repo": "juni2003/ai-jobtracker",
+      "pr_url": "https://github.com/juni2003/ai-jobtracker/pull/1",
+      "pr_title": "fix: route pw_scrape subprocess stderr to sys.stderr",
+      "category": "error_handling",
+      "severity": "low",
+      "opened_at": "2026-11-22T19:25:58.459377+00:00"
+    }
+  ],
   "run_history": [
     {
       "run_date": "2026-11-14",
@@ -122,16 +131,24 @@
     {
       "run_date": "2026-11-22",
       "repos_audited": [
-        "juni2003/VisiHealthAI-Medical-Visual-Question-Answering",
-        "juni2003/Smart-Farming-Agentic-AI"
+        "juni2003/CareerNode",
+        "juni2003/ai-jobtracker"
       ],
-      "prs_opened": [],
+      "prs_opened": [
+        {
+          "repo": "juni2003/ai-jobtracker",
+          "pr_url": "https://github.com/juni2003/ai-jobtracker/pull/1",
+          "pr_title": "fix: route pw_scrape subprocess stderr to sys.stderr",
+          "category": "error_handling",
+          "severity": "low",
+          "opened_at": "2026-11-22T19:25:58.459377+00:00"
+        }
+      ],
       "opportunities_found": 3,
       "llm_used": "gemini:gemini-2.5-flash",
-      "duration_seconds": 316.5,
+      "duration_seconds": 231.3,
       "errors": [
-        "Verification failed for juni2003/VisiHealthAI-Medical-Visual-Question-Answering: search_block not found verbatim in routes.py. The LLM may have hallucinated the existing code. Aborting patch.",
-        "Verification failed for juni2003/Smart-Farming-Agentic-AI: LLM could not produce a patch that matches the real file."
+        "Verification failed for juni2003/CareerNode: Verification failed after self-correction attempt.\nError output:\n"
       ]
     }
   ]
