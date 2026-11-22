@@ -197,13 +197,28 @@ class Verifier:
 
         # ── Apply the patch ────────────────────────────────────────────────
         try:
-            patched_content = self._apply_patch(
+            self._apply_patch(
                 target_path,
                 analysis.search_block,
                 analysis.replace_block,
             )
         except PatchError as exc:
-            raise VerificationError(str(exc))
+            if attempt >= 2:
+                raise VerificationError(str(exc))
+
+            # The LLM guessed the existing code instead of copying it. Show it
+            # the real file so it can re-emit a search_block that exists.
+            logger.warning(f"[Verifier] {exc} — asking the LLM to re-read the file ...")
+            corrected = self._ask_llm_to_fix_patch(
+                analysis, target_path.read_text(encoding="utf-8")
+            )
+            if not corrected.issue_found or not corrected.search_block:
+                raise VerificationError(
+                    "LLM could not produce a patch that matches the real file."
+                ) from exc
+
+            self._reset_worktree(repo_dir)
+            return self._attempt_verify(repo_dir, repo_name, repo_cfg, corrected, attempt=2)
 
         # Write any new files the LLM wants to create. Skip paths that already
         # exist (they are edits, not new files) and never clobber a directory.
@@ -290,6 +305,52 @@ class Verifier:
                     cmd,
                     (result.stderr or "").strip()[:200],
                 )
+
+    # Keep the prompt small enough for every provider's context window; a
+    # truncated read is flagged in the prompt so the model knows to stay safe.
+    MAX_FILE_CHARS_FOR_PROMPT = 12000
+
+    def _ask_llm_to_fix_patch(
+        self, original: CodeAnalysisResult, file_text: str
+    ) -> CodeAnalysisResult:
+        """
+        Ask the LLM for a new patch when the first one could not be applied.
+
+        The real file content is included because "the search_block does not
+        exist" is almost always the model paraphrasing the code it was shown;
+        feeding it the verbatim file is what lets it recover.
+        """
+        excerpt = file_text[: self.MAX_FILE_CHARS_FOR_PROMPT]
+        truncation = (
+            ""
+            if len(file_text) <= self.MAX_FILE_CHARS_FOR_PROMPT
+            else f"\n(file truncated after {self.MAX_FILE_CHARS_FOR_PROMPT} characters)"
+        )
+        prompt = f"""Your patch was rejected: the search_block does not appear in the real file.
+
+TARGET FILE: {original.target_file}
+
+REAL FILE CONTENT (verbatim):
+```
+{excerpt}{truncation}
+```
+
+YOUR search_block (NOT found in the file):
+```
+{original.search_block}
+```
+
+YOUR replace_block:
+```
+{original.replace_block}
+```
+
+Produce the fix again against the file content above.
+- Copy search_block character-for-character from the file (same indentation, same quotes).
+- Keep it short, but unique enough to appear exactly once.
+- If the fix cannot be made safely, set issue_found=false.
+"""
+        return self.llm.call(prompt, CodeAnalysisResult)
 
     def _ask_llm_to_correct(
         self, original: CodeAnalysisResult, error_output: str

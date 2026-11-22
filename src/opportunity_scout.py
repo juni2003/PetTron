@@ -53,7 +53,7 @@ SEARCH_QUERIES = [
 # GitHub Discussions are only reachable through GraphQL (no REST search).
 DISCUSSION_SEARCH_QUERY = """
 query($q: String!) {
-  search(query: $q, type: DISCUSSION, first: 5) {
+  search(query: $q, type: DISCUSSION, first: 10) {
     nodes {
       ... on Discussion {
         title
@@ -189,7 +189,13 @@ class OpportunityScout:
             logger.warning(f"[Scout] Discussion search skipped: {exc}")
             return []
 
-        nodes = ((data or {}).get("search") or {}).get("nodes") or []
+        # PyGithub hands back the whole GraphQL envelope ("{"data": {...}}"),
+        # not the inner "data" object. Accept both so the shape can never make
+        # every discussion silently disappear again.
+        payload = data if isinstance(data, dict) else {}
+        if isinstance(payload.get("data"), dict):
+            payload = payload["data"]
+        nodes = (payload.get("search") or {}).get("nodes") or []
         results: list[dict] = []
         for node in nodes:
             if not isinstance(node, dict) or not node.get("url"):

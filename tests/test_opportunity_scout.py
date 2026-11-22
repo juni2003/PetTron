@@ -122,22 +122,25 @@ class TestSearch(unittest.TestCase):
 class TestDiscussions(unittest.TestCase):
     def test_discussion_nodes_are_normalised(self):
         requester = mock.MagicMock()
+        # The shape PyGithub really returns: the whole GraphQL envelope.
         requester.graphql_query.return_value = (
             {},
             {
-                "search": {
-                    "nodes": [
-                        {
-                            "url": "https://github.com/o/r/discussions/7",
-                            "title": "Hiring an AI automation engineer",
-                            "body": "b" * 2000,
-                            "createdAt": "2026-11-13T00:00:00Z",
-                            "comments": {"totalCount": 3},
-                            "repository": {"nameWithOwner": "o/r"},
-                            "labels": {"nodes": [{"name": "hiring"}]},
-                        },
-                        {"url": None},
-                    ]
+                "data": {
+                    "search": {
+                        "nodes": [
+                            {
+                                "url": "https://github.com/o/r/discussions/7",
+                                "title": "Hiring an AI automation engineer",
+                                "body": "b" * 2000,
+                                "createdAt": "2026-11-13T00:00:00Z",
+                                "comments": {"totalCount": 3},
+                                "repository": {"nameWithOwner": "o/r"},
+                                "labels": {"nodes": [{"name": "hiring"}]},
+                            },
+                            {"url": None},
+                        ]
+                    }
                 }
             },
         )
@@ -149,6 +152,16 @@ class TestDiscussions(unittest.TestCase):
         self.assertEqual(out[0]["comments"], 3)
         self.assertEqual(len(out[0]["body"]), 800)
         self.assertEqual(requester.graphql_query.call_args[0][0], DISCUSSION_SEARCH_QUERY)
+
+    def test_unwrapped_payload_is_also_accepted(self):
+        requester = mock.MagicMock()
+        requester.graphql_query.return_value = (
+            {},
+            {"search": {"nodes": [{"url": "https://github.com/o/r/discussions/9"}]}},
+        )
+        scout = make_scout(requester=requester)
+        out = scout._search_discussions("2026-11-08")
+        self.assertEqual([i["url"] for i in out], ["https://github.com/o/r/discussions/9"])
 
     def test_discussion_failure_is_ignored(self):
         requester = mock.MagicMock()
