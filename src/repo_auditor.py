@@ -305,6 +305,10 @@ FOCUS ON finding real issues in this priority order:
 RULES:
   - Only report issue_found=true if you find a REAL, specific, fixable issue.
   - Do NOT report style nits, missing docstrings, or personal preference changes.
+  - The patch MUST change behaviour: control flow, exception handling, a condition,
+    a return value or an API call. Rewording a docstring, comment or user-facing
+    message is NOT a fix and will be rejected.
+  - Never use JavaScript literals in Python: write True / False / None.
   - The search_block must be an EXACT copy of the lines you want to replace
     (copy-paste from the file content above, preserve indentation exactly).
   - The replace_block must be a complete, correct drop-in replacement.
