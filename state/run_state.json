@@ -5,7 +5,16 @@
     "juni2003/CrawlX-Data-Scrapping-Project",
     "juni2003/NexusAI-Fashion-Assistant"
   ],
-  "prs_opened_today": [],
+  "prs_opened_today": [
+    {
+      "repo": "juni2003/NexusAI-Fashion-Assistant",
+      "pr_url": "https://github.com/juni2003/NexusAI-Fashion-Assistant/pull/4",
+      "pr_title": "fix: Use correct Groq model for LLM inference",
+      "category": "bug",
+      "severity": "high",
+      "opened_at": "2026-11-22T19:09:10.814907+00:00"
+    }
+  ],
   "run_history": [
     {
       "run_date": "2026-11-14",
@@ -125,12 +134,21 @@
         "juni2003/CrawlX-Data-Scrapping-Project",
         "juni2003/NexusAI-Fashion-Assistant"
       ],
-      "prs_opened": [],
-      "opportunities_found": 0,
-      "llm_used": "not-called",
-      "duration_seconds": 64.8,
+      "prs_opened": [
+        {
+          "repo": "juni2003/NexusAI-Fashion-Assistant",
+          "pr_url": "https://github.com/juni2003/NexusAI-Fashion-Assistant/pull/4",
+          "pr_title": "fix: Use correct Groq model for LLM inference",
+          "category": "bug",
+          "severity": "high",
+          "opened_at": "2026-11-22T19:09:10.814907+00:00"
+        }
+      ],
+      "opportunities_found": 3,
+      "llm_used": "gemini:gemini-2.5-flash",
+      "duration_seconds": 95.2,
       "errors": [
-        "Opportunity Scout failed: Both Gemini and Groq failed after all retries. Last errors: gemini:gemini-2.0-flash attempt 1: ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.0-flash is no longer available. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://aistudio.google.com/docs/get-started).', 'status': 'NOT_FOUND'}} | gemini:gemini-2.5-flash attempt 1: ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'JSON mode is not enabled for api version v1. Use api version v1beta instead.', 'status': 'INVALID_ARGUMENT'}} | groq:llama-3.1-8b-instant attempt 1: NotFoundError: Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}} | groq:llama-3.1-8b-instant attempt 2: NotFoundError: Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}} | groq:llama-3.1-8b-instant attempt 3: NotFoundError: Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}"
+        "Verification failed for juni2003/CrawlX-Data-Scrapping-Project: search_block not found verbatim in summarizer.py. The LLM may have hallucinated the existing code. Aborting patch."
       ]
     }
   ]

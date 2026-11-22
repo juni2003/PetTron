@@ -1,12 +1,12 @@
 repositories:
 - branch: main
   language: python
-  last_checked: null
+  last_checked: '2026-11-22'
   name: juni2003/CrawlX-Data-Scrapping-Project
   verify_cmd: python -m compileall . -q
 - branch: main
   language: python
-  last_checked: null
+  last_checked: '2026-11-22'
   name: juni2003/NexusAI-Fashion-Assistant
   verify_cmd: python -m compileall . -q
 - branch: main
