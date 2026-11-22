@@ -268,3 +268,61 @@ class TestLowValuePatchGate(unittest.TestCase):
             "a = 1\n", "a = 1\n", "try:\n    a = 1\nexcept Exception:\n    a = 0\n"
         )
         self.assertEqual(out, "applied")
+
+
+class TestPatchCannotCorruptTheFile(unittest.TestCase):
+    """Regression: run 45062338332 committed a file that did not compile."""
+
+    def _file(self, content, name="mod.py"):
+        path = Path(tempfile.mkdtemp(prefix="pettron_corrupt_")) / name
+        path.write_text(content, encoding="utf-8")
+        return path
+
+    def test_search_block_that_matches_mid_line_is_refused(self):
+        path = self._file("    Args:\n        url: The URL of the content\n")
+        with self.assertRaises(PatchError) as ctx:
+            Verifier._apply_patch(path, "        url: The URL", "        url: The URL\n    return x\n")
+        self.assertIn("middle of a line", str(ctx.exception))
+        self.assertIn("of the content", path.read_text(encoding="utf-8"))
+
+    def test_patch_that_breaks_python_syntax_is_refused(self):
+        path = self._file('def f():\n    """Doc."""\n    return 1\n')
+        with self.assertRaises(PatchError) as ctx:
+            Verifier._apply_patch(path, "    return 1\n", "    return 1\nof the content\n")
+        self.assertIn("does not parse", str(ctx.exception))
+
+    def test_python_syntax_check_ignores_non_python_targets(self):
+        path = self._file("value: = ;\n", name="notes.txt")
+        self.assertIn("value: = ;", Verifier._apply_patch(path, "value: = ;", "value: = ; ok"))
+
+
+class TestBytecodeCachesAreCleared(unittest.TestCase):
+    """A .pyc from the baseline run must not hide a broken patch (compileall
+    compares mtimes in whole seconds, so a same-second patch was skipped)."""
+
+    def test_clear_bytecode_caches_removes_pyc_and_pycache(self):
+        root = Path(tempfile.mkdtemp(prefix="pettron_pyc_"))
+        pkg = root / "backend"
+        (pkg / "__pycache__").mkdir(parents=True)
+        (pkg / "__pycache__" / "s.cpython-312.pyc").write_bytes(b"x")
+        (pkg / "stray.pyc").write_bytes(b"x")
+        (pkg / "s.py").write_text("x = 1\n", encoding="utf-8")
+
+        Verifier._clear_bytecode_caches(root)
+
+        self.assertFalse((pkg / "__pycache__").exists())
+        self.assertFalse((pkg / "stray.pyc").exists())
+        self.assertTrue((pkg / "s.py").exists())
+
+    def test_clean_compile_sees_the_patched_file(self):
+        """The exact failure mode: same-second patch, cached .pyc, compileall."""
+        root = Path(tempfile.mkdtemp(prefix="pettron_cache_"))
+        (root / "backend").mkdir()
+        (root / "backend" / "s.py").write_text("x = 1\n", encoding="utf-8")
+        self.assertEqual(Verifier._run_verify(root, "python -m compileall . -q")[0], 0)
+
+        (root / "backend" / "s.py").write_text("x = 1\nof the content\n", encoding="utf-8")
+        self.assertEqual(Verifier._run_verify(root, "python -m compileall . -q")[0], 0)
+
+        Verifier._clear_bytecode_caches(root)
+        self.assertEqual(Verifier._run_verify(root, "python -m compileall . -q")[0], 1)

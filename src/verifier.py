@@ -236,6 +236,11 @@ class Verifier:
             logger.info(f"[Verifier] Created new file: {new_file.path}")
 
         # ── Run verify_cmd ─────────────────────────────────────────────────
+        # The baseline run above left .pyc files behind. compileall decides
+        # freshness from the source mtime in whole seconds, and a patch written
+        # in the same second as the baseline is therefore skipped — a broken
+        # patch would "pass". Drop the caches so every file is compiled again.
+        Verifier._clear_bytecode_caches(repo_dir)
         verify_cmd = repo_cfg.get("verify_cmd", "python -m compileall . -q")
         logger.info(f"[Verifier] Running verify_cmd (attempt {attempt}): {verify_cmd}")
 
@@ -269,6 +274,14 @@ class Verifier:
         self._reset_worktree(repo_dir)
 
         return self._attempt_verify(repo_dir, repo_name, repo_cfg, corrected, attempt=2)
+
+    @staticmethod
+    def _clear_bytecode_caches(root: Path) -> None:
+        """Remove __pycache__ directories and stray .pyc files under *root*."""
+        for cache_dir in root.rglob("__pycache__"):
+            shutil.rmtree(cache_dir, ignore_errors=True)
+        for pyc in root.rglob("*.pyc"):
+            pyc.unlink(missing_ok=True)
 
     @staticmethod
     def _run_verify(repo_dir: Path, verify_cmd: str) -> tuple[int, str]:
@@ -492,8 +505,18 @@ Please analyse the error and provide a CORRECTED patch.
         original = file_path.read_text(encoding="utf-8")
         Verifier._reject_low_value_patch(file_path, search_block, replace_block)
 
-        if search_block in original:
-            patched = original.replace(search_block, replace_block, 1)  # First occurrence only
+        idx = original.find(search_block)
+        if idx != -1 and not Verifier._on_line_boundaries(original, idx, search_block):
+            # The block only matches part of a line (e.g. the model quoted
+            # "url: The URL" out of "url: The URL of the content"). Splicing
+            # there leaves the rest of the line behind and corrupts the file.
+            raise PatchError(
+                f"search_block matches {file_path.name} only in the middle of a line. "
+                "Quote whole lines from the file."
+            )
+
+        if idx != -1:
+            patched = original[:idx] + replace_block + original[idx + len(search_block):]
         else:
             # Models often reproduce the code with a different indentation or
             # trailing whitespace. Accept that only when exactly one region
@@ -512,9 +535,35 @@ Please analyse the error and provide a CORRECTED patch.
             logger.info(
                 f"[Verifier] search_block matched ignoring indentation in {file_path.name}."
             )
+        # Only judge syntax when the file was valid to begin with, so a
+        # fragment or a test fixture is never rejected for not being a module.
+        if file_path.suffix in (".py", ".pyw") and Verifier._parses(original, file_path):
+            try:
+                compile(patched, str(file_path), "exec")
+            except SyntaxError as exc:
+                raise PatchError(
+                    f"patched {file_path.name} does not parse: {exc.msg} (line {exc.lineno})."
+                ) from exc
+
         file_path.write_text(patched, encoding="utf-8")
         logger.info(f"[Verifier] Patch applied to: {file_path.name}")
         return patched
+
+    @staticmethod
+    def _parses(source: str, file_path: Path) -> bool:
+        try:
+            compile(source, str(file_path), "exec")
+        except SyntaxError:
+            return False
+        return True
+
+    @staticmethod
+    def _on_line_boundaries(original: str, idx: int, block: str) -> bool:
+        """True when *block* starts and ends where a line starts and ends."""
+        starts_line = idx == 0 or original[idx - 1] == "\n"
+        end = idx + len(block)
+        ends_line = end == len(original) or original[end] == "\n" or block.endswith("\n")
+        return starts_line and ends_line
 
     @staticmethod
     def _make_branch_name(analysis: CodeAnalysisResult) -> str:

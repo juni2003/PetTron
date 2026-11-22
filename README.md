@@ -169,6 +169,7 @@ Before any patch is applied, `verify_cmd` is run on the pristine clone, so a
 repo whose checks were already broken is reported as such instead of looking
 like a patch the bot broke.
 
+| `patched <file> does not parse` / `matches <file> only in the middle of a line` | The patch was refused on purpose: a `search_block` must quote whole lines, and the patched Python file must still compile. The bot asks the model once more for a correct block instead of opening a PR with broken code. |
 ### A failed audit no longer looks like a clean day
 
 When the LLM could not analyse a repo, `repo_auditor` used to record it as
