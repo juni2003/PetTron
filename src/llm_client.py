@@ -103,6 +103,12 @@ _NON_RETRYABLE_MARKERS = (
     "permission denied",
     "401",
     "403",
+    # Quota/rate limits reset on the provider's clock, not ours: retrying in a
+    # few seconds only burns the retry budget. Walk to the next model instead
+    # (each model has its own quota bucket).
+    "resource_exhausted",
+    "429",
+    "quota",
 )
 
 # A rejected key is rejected for every model of that provider, so there is no

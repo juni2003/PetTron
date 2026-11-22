@@ -145,10 +145,28 @@ Common causes:
 | `404 NOT_FOUND` / `model not found` | The model id was retired. Handled automatically: the client lists the models your key can use and continues (see below) |
 | `JSON mode is not enabled for api version v1` | Fixed — the client pins `v1beta`, which is the only version that serves structured output |
 | `400 INVALID_ARGUMENT` | Schema mismatch: pass `response_schema=<Pydantic class>`, never a raw `model_json_schema()` dict |
+| `429 RESOURCE_EXHAUSTED` / `Quota exceeded ... limit: 20` | Free-tier daily quota for that model is gone (it resets on Google's clock, often ~12h). The client now treats quota errors as non-retryable and moves to the next model instead of sleeping. Add billing or set `GEMINI_MODEL` to a model with quota left |
+| `verify_cmd fails on the unmodified repo` | The repo's `verify_cmd` is broken before any patch, so PetTron cannot judge a patch. Fix `config/repos.yaml`, or set `baseline_verify: false` for that repo to skip the check |
 
-Non-retryable errors (400/401/403, bad key) now fail in one attempt instead of
-burning ~2 minutes of exponential backoff before the fallback is tried. A
-rejected API key stops that provider at once instead of trying every model.
+Non-retryable errors (400/401/403, bad key, 429/quota) now fail in one attempt
+instead of burning ~2 minutes of exponential backoff before the fallback is
+tried. A rejected API key stops that provider at once instead of trying every
+model.
+
+### When a patch does not match the file
+
+A model sometimes re-types the code instead of copying it, so an exact
+`search_block` is not found. PetTron no longer throws the PR away immediately:
+
+1. an indentation/whitespace-only difference is applied when exactly one region
+   in the file matches (ambiguous or missing matches still fail);
+2. otherwise the LLM is shown the real file once and asked to redo the patch;
+3. only a second failure ends the audit, and the digest lists the repo as
+   failed with the reason.
+
+Before any patch is applied, `verify_cmd` is run on the pristine clone, so a
+repo whose checks were already broken is reported as such instead of looking
+like a patch the bot broke.
 
 ### A failed audit no longer looks like a clean day
 
