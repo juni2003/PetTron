@@ -146,6 +146,7 @@ Common causes:
 | `JSON mode is not enabled for api version v1` | Fixed — the client pins `v1beta`, which is the only version that serves structured output |
 | `400 INVALID_ARGUMENT` | Schema mismatch: pass `response_schema=<Pydantic class>`, never a raw `model_json_schema()` dict |
 | `429 RESOURCE_EXHAUSTED` / `Quota exceeded ... limit: 20` | Free-tier daily quota for that model is gone (it resets on Google's clock, often ~12h). The client now treats quota errors as non-retryable and moves to the next model instead of sleeping. Add billing or set `GEMINI_MODEL` to a model with quota left |
+| `413 Request too large` / `tokens per minute (TPM): Limit 8000` | The audit prompt outgrew Groq's free-tier limit. Now capped at 6 files × 2200 chars (`MAX_FILES_PER_ANALYSIS`, `MAX_CHARS_PER_FILE` in `src/repo_auditor.py`); raise them only if your key is on a paid tier |
 | `verify_cmd fails on the unmodified repo` | The repo's `verify_cmd` is broken before any patch, so PetTron cannot judge a patch. Fix `config/repos.yaml`, or set `baseline_verify: false` for that repo to skip the check |
 
 Non-retryable errors (400/401/403, bad key, 429/quota) now fail in one attempt

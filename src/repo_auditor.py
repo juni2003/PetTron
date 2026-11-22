@@ -62,7 +62,13 @@ SOURCE_EXTENSIONS = {
 }
 
 MAX_FILE_SIZE_BYTES = 50_000   # 50 KB
-MAX_FILES_PER_ANALYSIS = 10    # Max files sent to LLM in one call
+MAX_FILES_PER_ANALYSIS = 6     # Max files sent to LLM in one call
+
+# Groq's free tier allows 8000 tokens per minute; a 10 x 3000-char prompt is
+# ~8.7k tokens and is refused with 413 "Request too large". 6 x 2200 chars is
+# ~4k tokens and still enough context to find one real bug.
+MAX_CHARS_PER_FILE = 2200      # Per-file slice included in the prompt
+MAX_PROMPT_FILE_CHARS = 16_000  # Hard ceiling for all file content together
 
 
 class RepoAuditor:
@@ -278,9 +284,13 @@ class RepoAuditor:
         Build the full prompt sent to the LLM for code analysis.
         """
         files_section = ""
-        for path, content in files.items():
-            files_section += f"\n\n### FILE: {path}\n```\n{content[:3000]}\n```"
-            # Truncate very long files to 3000 chars to protect token budget
+        budget = MAX_PROMPT_FILE_CHARS
+        for path, content in list(files.items())[:MAX_FILES_PER_ANALYSIS]:
+            if budget <= 0:
+                break
+            snippet = content[: min(MAX_CHARS_PER_FILE, budget)]
+            budget -= len(snippet)
+            files_section += f"\n\n### FILE: {path}\n```\n{snippet}\n```"
 
         return f"""You are PetTron, an expert code review AI agent. Your task is to audit
 the following source files from the GitHub repository "{repo_name}" and identify

@@ -68,3 +68,19 @@ class TestAuditFailureReporting(unittest.TestCase):
         by_name = {name: analysis for name, _, analysis in results}
         self.assertTrue(by_name["o/good"].issue_found)
         self.assertFalse(by_name["o/bad"].issue_found)
+
+
+class TestPromptBudget(unittest.TestCase):
+    """Free-tier Groq rejects the whole request once it tops 8k tokens/min."""
+
+    def test_prompt_stays_under_the_token_budget(self):
+        files = {f"module_{i}.py": "value = 1\n" * 900 for i in range(10)}
+        prompt = RepoAuditor._build_analysis_prompt("o/r", files)
+
+        # 4 chars/token is the usual rough estimate; keep well under 8000.
+        self.assertLess(len(prompt) / 4, 6500)
+        self.assertLessEqual(prompt.count("### FILE:"), 6)
+
+    def test_each_file_is_truncated(self):
+        prompt = RepoAuditor._build_analysis_prompt("o/r", {"big.py": "x = 1\n" * 5000})
+        self.assertLess(prompt.count("x = 1"), 1000)
