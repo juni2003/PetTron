@@ -214,10 +214,13 @@ class Notifier:
             )
             for i, opp in enumerate(opps, 1):
                 score_stars = "⭐" * min(opp.match_score, 10)
+                # Discussions and issues are different places to post a reply,
+                # and the drafts only ever come from a search over both.
+                kind = "Discussion" if "/discussions/" in opp.issue_url else "Issue"
                 part_b_lines.append(f"""
 ### 🎯 Opportunity {i} — Match Score: {opp.match_score}/10 {score_stars}
 
-**Issue:** [{opp.issue_title}]({opp.issue_url})
+**{kind}:** [{opp.issue_title}]({opp.issue_url})
 **Repo:** `{opp.repo_name}`
 **Why it matches:** {opp.match_reason}
 
