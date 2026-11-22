@@ -198,3 +198,37 @@ class TestPatchMismatchSelfCorrection(unittest.TestCase):
                     self._analysis("not in the file", "x = 1\n"),
                     attempt=1,
                 )
+
+
+class TestBaselineVerify(unittest.TestCase):
+    """An already-broken verify_cmd must be reported as such, not as a bad patch."""
+
+    def test_failing_baseline_raises_with_the_reason(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            verifier = Verifier(gh=None, llm=None)
+            with self.assertRaises(VerificationError) as ctx:
+                verifier._assert_baseline_verify(
+                    Path(tmp), {"verify_cmd": "exit 2"}
+                )
+            self.assertIn("unmodified repo", str(ctx.exception))
+            self.assertIn("exit 2", str(ctx.exception))
+
+    def test_passing_baseline_is_silent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            verifier = Verifier(gh=None, llm=None)
+            verifier._assert_baseline_verify(Path(tmp), {"verify_cmd": "true"})
+
+    def test_baseline_can_be_disabled_per_repo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            verifier = Verifier(gh=None, llm=None)
+            verifier._assert_baseline_verify(
+                Path(tmp), {"verify_cmd": "exit 9", "baseline_verify": False}
+            )
+
+    def test_verify_output_is_redacted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            returncode, output = Verifier._run_verify(
+                Path(tmp), "echo 'token ghp_abcdefghijklmnopqrstuvwxyz' && exit 1"
+            )
+            self.assertEqual(returncode, 1)
+            self.assertNotIn("ghp_abcdefghijklmnopqrstuvwxyz", output)

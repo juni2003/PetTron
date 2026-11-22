@@ -99,6 +99,7 @@ class Verifier:
         tmpdir = tempfile.mkdtemp(prefix="pettron_")
         try:
             repo_dir = self._clone_repo(repo_name, repo_cfg["branch"], tmpdir)
+            self._assert_baseline_verify(repo_dir, repo_cfg)
             return self._attempt_verify(repo_dir, repo_name, repo_cfg, analysis, attempt=1)
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -238,23 +239,9 @@ class Verifier:
         verify_cmd = repo_cfg.get("verify_cmd", "python -m compileall . -q")
         logger.info(f"[Verifier] Running verify_cmd (attempt {attempt}): {verify_cmd}")
 
-        try:
-            verify_result = subprocess.run(
-                verify_cmd,
-                shell=True,
-                cwd=str(repo_dir),
-                capture_output=True,
-                text=True,
-                timeout=MAX_VERIFY_TIMEOUT_SECS,
-            )
-        except subprocess.TimeoutExpired:
-            # Treat a hung verify command as a normal verification failure so
-            # the self-correction path still gets a chance to run.
-            error_output = f"verify_cmd timed out after {MAX_VERIFY_TIMEOUT_SECS}s"
-            logger.warning(f"[Verifier] ❌ {error_output} (attempt {attempt})")
-            verify_result = None
+        returncode, error_output = self._run_verify(repo_dir, verify_cmd)
 
-        if verify_result is not None and verify_result.returncode == 0:
+        if returncode == 0:
             logger.info(f"[Verifier] ✅ Verification passed on attempt {attempt}.")
             # Return the final patched content of the target file
             final_content = target_path.read_text(encoding="utf-8")
@@ -262,8 +249,6 @@ class Verifier:
             return final_content, branch_name, analysis
 
         # ── Verification failed ────────────────────────────────────────────
-        if verify_result is not None:
-            error_output = (verify_result.stdout + verify_result.stderr)[:2000]
         logger.warning(f"[Verifier] ❌ Verification failed (attempt {attempt}):\n{error_output}")
 
         if attempt >= 2:
@@ -284,6 +269,42 @@ class Verifier:
         self._reset_worktree(repo_dir)
 
         return self._attempt_verify(repo_dir, repo_name, repo_cfg, corrected, attempt=2)
+
+    @staticmethod
+    def _run_verify(repo_dir: Path, verify_cmd: str) -> tuple[int, str]:
+        """Run *verify_cmd* in *repo_dir*; return (returncode, combined output)."""
+        try:
+            result = subprocess.run(
+                verify_cmd,
+                shell=True,
+                cwd=str(repo_dir),
+                capture_output=True,
+                text=True,
+                timeout=MAX_VERIFY_TIMEOUT_SECS,
+            )
+        except subprocess.TimeoutExpired:
+            return 124, f"verify_cmd timed out after {MAX_VERIFY_TIMEOUT_SECS}s"
+        return result.returncode, Verifier._redact((result.stdout + result.stderr)[:2000])
+
+    def _assert_baseline_verify(self, repo_dir: Path, repo_cfg: dict) -> None:
+        """
+        Fail before patching if verify_cmd already fails on the pristine clone.
+
+        Otherwise an already-broken repo looks like the patch broke it: the run
+        logs an empty "Error output:" and the PR is lost for no reason.
+        """
+        verify_cmd = repo_cfg.get("verify_cmd", "python -m compileall . -q")
+        if repo_cfg.get("baseline_verify", True) is False:
+            return
+        logger.info(f"[Verifier] Checking verify_cmd on the unmodified clone: {verify_cmd}")
+        returncode, output = self._run_verify(repo_dir, verify_cmd)
+        if returncode != 0:
+            tail = output.strip().splitlines()[-1][:200] if output.strip() else "no output"
+            raise VerificationError(
+                f"verify_cmd fails on the unmodified repo (exit {returncode}), "
+                f"so a patch cannot be judged: {verify_cmd} → {tail}"
+            )
+        logger.info("[Verifier] Baseline verification passed.")
 
     @staticmethod
     def _reset_worktree(repo_dir: Path) -> None:

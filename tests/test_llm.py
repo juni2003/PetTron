@@ -39,6 +39,7 @@ from src.llm_client import (
     GEMINI_API_VERSION,
     LLMClient,
     LLMError,
+    _is_non_retryable,
 )
 from src.schemas import CodeAnalysisResult, OpportunityReport
 
@@ -277,6 +278,21 @@ class TestCredentials(unittest.TestCase):
             client = LLMClient()
         self.assertEqual(client.gemini_models[0], DEFAULT_GEMINI_MODEL)
         self.assertEqual(client.groq_models[0], DEFAULT_GROQ_MODEL)
+
+
+class TestRetryClassification(unittest.TestCase):
+    def test_daily_quota_is_not_retried(self):
+        # Free-tier 429s reset on the provider's clock; retrying in 5s only
+        # burns ~100s of the job and hides the real cause.
+        exc = Exception(
+            "429 RESOURCE_EXHAUSTED. Quota exceeded for metric: "
+            "generate_content_free_tier_requests, limit: 20"
+        )
+        self.assertTrue(_is_non_retryable(exc))
+
+    def test_transient_network_errors_are_still_retried(self):
+        self.assertFalse(_is_non_retryable(Exception("Connection reset by peer")))
+        self.assertFalse(_is_non_retryable(Exception("503 Service Unavailable")))
 
 
 class TestParse(unittest.TestCase):
