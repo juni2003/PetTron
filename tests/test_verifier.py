@@ -155,7 +155,7 @@ class TestPatchMismatchSelfCorrection(unittest.TestCase):
                 repo,
                 "o/r",
                 {"verify_cmd": "python -m compileall . -q"},
-                self._analysis("def total(xs):\n  return sum(xs)\n", "def total(xs):\n    return 0\n"),
+                self._analysis("def absent():\n    return None\n", "def total(xs):\n    return 0\n"),
                 attempt=1,
             )
 

@@ -118,13 +118,26 @@ class TestApplyPatch(unittest.TestCase):
         finally:
             file_path.unlink(missing_ok=True)
 
-    def test_raises_patch_error_on_whitespace_mismatch(self):
-        """PatchError is raised when indentation doesn't match exactly."""
+    def test_indentation_only_mismatch_is_applied(self):
+        """A unique line-for-line match applies even if indentation drifted."""
         original = "    indented_line = True\n"
         file_path = make_temp_file(original)
         try:
+            new_content = Verifier._apply_patch(
+                file_path, "      indented_line = True", "    indented_line = False\n"
+            )
+            self.assertEqual(new_content, "    indented_line = False\n")
+        finally:
+            file_path.unlink(missing_ok=True)
+
+    def test_ambiguous_whitespace_match_raises(self):
+        """Two identical regions mean the match is ambiguous → refuse."""
+        original = "x = 1\nif y:\n    x = 1\n"
+        file_path = make_temp_file(original)
+        try:
             with self.assertRaises(PatchError):
-                Verifier._apply_patch(file_path, "      indented_line = True", "      indented_line = False")
+                Verifier._apply_patch(file_path, "\tx = 1", "\tx = 2")
+            self.assertEqual(file_path.read_text(), original)
         finally:
             file_path.unlink(missing_ok=True)
 

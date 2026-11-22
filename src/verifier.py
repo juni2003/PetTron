@@ -383,6 +383,34 @@ Please analyse the error and provide a CORRECTED patch.
         return self.llm.call(prompt, CodeAnalysisResult)
 
     @staticmethod
+    def _match_ignoring_whitespace(original: str, search_block: str) -> tuple[int, int] | None:
+        """
+        Find *search_block* in *original* comparing stripped lines.
+
+        Returns the (start, end) character offsets of the matched region, or
+        None when there is no match or more than one (ambiguous).
+        """
+        wanted = [line.strip() for line in search_block.strip("\n").splitlines()]
+        if not any(wanted):
+            return None
+
+        lines = original.splitlines(keepends=True)
+        stripped = [line.strip() for line in lines]
+        width = len(wanted)
+        hits = [
+            i
+            for i in range(len(stripped) - width + 1)
+            if stripped[i : i + width] == wanted
+        ]
+        if len(hits) != 1:
+            return None
+
+        start_line = hits[0]
+        start = sum(len(line) for line in lines[:start_line])
+        end = start + sum(len(line) for line in lines[start_line : start_line + width])
+        return start, end
+
+    @staticmethod
     def _apply_patch(file_path: Path, search_block: str, replace_block: str) -> str:
         """
         Apply a search/replace patch to a file.
@@ -392,13 +420,26 @@ Please analyse the error and provide a CORRECTED patch.
         """
         original = file_path.read_text(encoding="utf-8")
 
-        if search_block not in original:
-            raise PatchError(
-                f"search_block not found verbatim in {file_path.name}. "
-                "The LLM may have hallucinated the existing code. Aborting patch."
+        if search_block in original:
+            patched = original.replace(search_block, replace_block, 1)  # First occurrence only
+        else:
+            # Models often reproduce the code with a different indentation or
+            # trailing whitespace. Accept that only when exactly one region
+            # matches; anything ambiguous is a real mismatch.
+            span = Verifier._match_ignoring_whitespace(original, search_block)
+            if span is None:
+                raise PatchError(
+                    f"search_block not found verbatim in {file_path.name}. "
+                    "The LLM may have hallucinated the existing code. Aborting patch."
+                )
+            start, end = span
+            tail = replace_block
+            if end < len(original) and not tail.endswith("\n"):
+                tail += "\n"
+            patched = original[:start] + tail + original[end:]
+            logger.info(
+                f"[Verifier] search_block matched ignoring indentation in {file_path.name}."
             )
-
-        patched = original.replace(search_block, replace_block, 1)  # Replace first occurrence only
         file_path.write_text(patched, encoding="utf-8")
         logger.info(f"[Verifier] Patch applied to: {file_path.name}")
         return patched
