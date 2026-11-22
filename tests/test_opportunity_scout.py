@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from src.opportunity_scout import DISCUSSION_SEARCH_QUERY, OpportunityScout
-from src.schemas import OpportunityReport
+from src.schemas import OpportunityDraft, OpportunityReport
 
 PROFILE = {
     "personal": {
@@ -223,3 +223,42 @@ class TestRankingPrompt(unittest.TestCase):
         scout._rank_and_draft([issue()])
         prompt = scout.llm.call.call_args[0][0]
         self.assertIn('"kind": "issue"', prompt)
+
+
+class TestEmptyRankingIsRetried(unittest.TestCase):
+    """gpt-oss answered 'Do not pad' with an empty list on a full candidate pool."""
+
+    def _scout(self, responses):
+        scout = make_scout()
+        scout.llm.call.side_effect = responses
+        return scout
+
+    def test_empty_report_is_asked_once_more(self):
+        empty = OpportunityReport(opportunities=[])
+        filled = OpportunityReport(
+            opportunities=[
+                OpportunityDraft(
+                    issue_url="https://github.com/o/r/issues/1",
+                    issue_title="Need an agent dev",
+                    repo_name="o/r",
+                    match_score=8,
+                    match_reason="agentic work",
+                    reply_draft="Happy to help.",
+                )
+            ]
+        )
+        scout = self._scout([empty, filled])
+
+        report = scout._rank_and_draft([issue()])
+
+        self.assertEqual(len(report.opportunities), 1)
+        self.assertEqual(scout.llm.call.call_count, 2)
+        self.assertIn("returned an empty list", scout.llm.call.call_args[0][0])
+
+    def test_a_real_empty_pool_is_not_retried(self):
+        scout = self._scout([OpportunityReport(opportunities=[])])
+
+        report = scout._rank_and_draft([])
+
+        self.assertEqual(report.opportunities, [])
+        self.assertEqual(scout.llm.call.call_count, 1)

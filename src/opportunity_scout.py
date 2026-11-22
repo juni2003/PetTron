@@ -348,5 +348,22 @@ RULES FOR REPLY DRAFTS:
   - Do NOT start with "I am a developer looking for work." — that's spam.
   - Sound like a confident, helpful engineer, not a job seeker.
 """
-        return self.llm.call(prompt, OpportunityReport)
+        report = self.llm.call(prompt, OpportunityReport)
+        if report.opportunities or not condensed_candidates:
+            return report
+
+        # An empty list is almost never a real answer: the model was handed
+        # candidates and told to return fewer only when fewer are relevant, and
+        # it reads that as permission to return none (gpt-oss does this).
+        logger.warning(
+            "[Scout] LLM returned no opportunities from %d candidate(s) — asking once more.",
+            len(condensed_candidates),
+        )
+        retry_prompt = (
+            prompt
+            + "\n\nYou returned an empty list. That is not acceptable: rank the "
+            "candidates above and return the best 1-3 with reply drafts. Pick the "
+            "closest matches even if the fit is only moderate.\n"
+        )
+        return self.llm.call(retry_prompt, OpportunityReport)
 
