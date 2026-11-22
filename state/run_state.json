@@ -2,19 +2,10 @@
   "last_run_date": "2026-11-22",
   "repo_rotation_index": 0,
   "repos_checked_today": [
-    "juni2003/CrawlX-Data-Scrapping-Project",
-    "juni2003/NexusAI-Fashion-Assistant"
+    "juni2003/VisiHealthAI-Medical-Visual-Question-Answering",
+    "juni2003/Smart-Farming-Agentic-AI"
   ],
-  "prs_opened_today": [
-    {
-      "repo": "juni2003/NexusAI-Fashion-Assistant",
-      "pr_url": "https://github.com/juni2003/NexusAI-Fashion-Assistant/pull/4",
-      "pr_title": "fix: Use correct Groq model for LLM inference",
-      "category": "bug",
-      "severity": "high",
-      "opened_at": "2026-11-22T19:09:10.814907+00:00"
-    }
-  ],
+  "prs_opened_today": [],
   "run_history": [
     {
       "run_date": "2026-11-14",
@@ -131,24 +122,16 @@
     {
       "run_date": "2026-11-22",
       "repos_audited": [
-        "juni2003/CrawlX-Data-Scrapping-Project",
-        "juni2003/NexusAI-Fashion-Assistant"
+        "juni2003/VisiHealthAI-Medical-Visual-Question-Answering",
+        "juni2003/Smart-Farming-Agentic-AI"
       ],
-      "prs_opened": [
-        {
-          "repo": "juni2003/NexusAI-Fashion-Assistant",
-          "pr_url": "https://github.com/juni2003/NexusAI-Fashion-Assistant/pull/4",
-          "pr_title": "fix: Use correct Groq model for LLM inference",
-          "category": "bug",
-          "severity": "high",
-          "opened_at": "2026-11-22T19:09:10.814907+00:00"
-        }
-      ],
+      "prs_opened": [],
       "opportunities_found": 3,
       "llm_used": "gemini:gemini-2.5-flash",
-      "duration_seconds": 95.2,
+      "duration_seconds": 316.5,
       "errors": [
-        "Verification failed for juni2003/CrawlX-Data-Scrapping-Project: search_block not found verbatim in summarizer.py. The LLM may have hallucinated the existing code. Aborting patch."
+        "Verification failed for juni2003/VisiHealthAI-Medical-Visual-Question-Answering: search_block not found verbatim in routes.py. The LLM may have hallucinated the existing code. Aborting patch.",
+        "Verification failed for juni2003/Smart-Farming-Agentic-AI: LLM could not produce a patch that matches the real file."
       ]
     }
   ]

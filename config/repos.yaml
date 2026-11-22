@@ -11,12 +11,12 @@ repositories:
   verify_cmd: python -m compileall . -q
 - branch: main
   language: python
-  last_checked: null
+  last_checked: '2026-11-22'
   name: juni2003/VisiHealthAI-Medical-Visual-Question-Answering
   verify_cmd: python -m compileall . -q
 - branch: main
   language: python
-  last_checked: null
+  last_checked: '2026-11-22'
   name: juni2003/Smart-Farming-Agentic-AI
   verify_cmd: python -m compileall . -q
 - branch: main
