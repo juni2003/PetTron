@@ -176,7 +176,9 @@ baseline was never recompiled and a broken file "passed".
 `verify_cmd` is the only behavioural gate, so a default of
 `python -m compileall . -q` proves the patch parses and nothing more. Give a
 repo a real command in `config/repos.yaml` (`verify_cmd: "pytest -q"`) if you
-want the bot's PRs held to the repo's own tests.
+want the bot's PRs held to the repo's own tests. A repo whose own checks are red
+is skipped with that reason every run until they are green — that is the gate
+working, not a PetTron failure.
 
 ### A failed audit no longer looks like a clean day
 
