@@ -192,3 +192,34 @@ class TestRanking(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRankingPrompt(unittest.TestCase):
+    def test_discussions_reach_the_ranking_prompt(self):
+        """Regression: a fixed [:5] slice cut every discussion out of the prompt."""
+        scout = make_scout()
+        scout.llm.call.return_value = OpportunityReport(opportunities=[])
+
+        candidates = [issue() for _ in range(10)]
+        candidates.append({
+            "kind": "discussion",
+            "url": "https://github.com/o/r/discussions/7",
+            "title": "Freelance project inquiry",
+            "repo": "o/r",
+            "body": "Looking for someone to build an AI agent.",
+            "labels": [],
+        })
+
+        scout._rank_and_draft(candidates)
+
+        prompt = scout.llm.call.call_args[0][0]
+        self.assertIn("https://github.com/o/r/discussions/7", prompt)
+        self.assertIn('"kind": "discussion"', prompt)
+        self.assertIn("MUST be one of the top 3", prompt)
+
+    def test_prompt_shows_issues_as_issues(self):
+        scout = make_scout()
+        scout.llm.call.return_value = OpportunityReport(opportunities=[])
+        scout._rank_and_draft([issue()])
+        prompt = scout.llm.call.call_args[0][0]
+        self.assertIn('"kind": "issue"', prompt)

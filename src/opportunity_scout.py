@@ -42,6 +42,9 @@ MAX_RAW_RESULTS = 10
 # can no longer push every discussion out of the ranking.
 MAX_DISCUSSION_RESULTS = 4
 
+# Candidates handed to the ranking LLM (issues + discussions).
+MAX_RANKED_CANDIDATES = 14
+
 # Courtesy sleep between GitHub Search API calls (in seconds)
 SEARCH_SLEEP_SECS = 3
 
@@ -207,6 +210,7 @@ class OpportunityScout:
             if not isinstance(node, dict) or not node.get("url"):
                 continue
             results.append({
+                "kind":       "discussion",
                 "url":        node["url"],
                 "title":      node.get("title", ""),
                 "repo":       (node.get("repository") or {}).get("nameWithOwner", ""),
@@ -278,16 +282,20 @@ class OpportunityScout:
         Send the top candidates + profile to the LLM.
         Ask it to rank and return the top 3 with drafted replies.
         """
-        # Take top 5 candidates and truncate bodies to keep prompt tight
-        condensed_candidates = []
-        for c in candidates[:5]:
-            condensed_candidates.append({
+        # Truncate bodies to keep the prompt tight. Discussions used to be cut
+        # off here by a fixed [:5] slice — they are appended after the issues,
+        # so a full issue pool pushed every discussion out of the prompt.
+        condensed_candidates = [
+            {
+                "kind": c.get("kind", "issue"),
                 "url": c.get("url", ""),
                 "title": c.get("title", ""),
                 "repo": c.get("repo", ""),
                 "snippet": (c.get("body") or "")[:250],
                 "labels": c.get("labels", []),
-            })
+            }
+            for c in candidates[:MAX_RANKED_CANDIDATES]
+        ]
 
         # Compact profile context
         condensed_profile = {
@@ -323,9 +331,13 @@ CANDIDATE GITHUB ISSUES:
 {candidates_text}
 
 RULES FOR SELECTING OPPORTUNITIES:
-  - Prioritise issues that explicitly mention compensation (bounty, paid, freelance, hiring).
+  - Prioritise posts that explicitly mention compensation (bounty, paid, freelance, hiring).
   - Rank by: relevance to Junaid's stack > posting recency > likelihood of response.
-  - Skip issues that look like generic bug reports with no intention to hire.
+  - Skip posts that look like generic bug reports with no intention to hire.
+  - Candidates have a "kind": "issue" or "discussion". If a relevant discussion is in the
+    list, it MUST be one of the top 3 — discussions are where people ask for AI-agent,
+    automation and freelance help and where a reply is most likely to be read.
+  - Do not pad: if fewer than 3 candidates are genuinely relevant, return fewer.
 
 RULES FOR REPLY DRAFTS:
   - Each reply must be CONCISE (2-3 short paragraphs max).
