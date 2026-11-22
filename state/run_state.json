@@ -124,9 +124,9 @@
         "juni2003/CareerNode"
       ],
       "prs_opened": [],
-      "opportunities_found": 0,
+      "opportunities_found": 3,
       "llm_used": "groq:openai/gpt-oss-20b",
-      "duration_seconds": 83.5,
+      "duration_seconds": 104.0,
       "errors": [
         "Verification failed for juni2003/CareerNode: verify_cmd fails on the unmodified repo (exit 2), so a patch cannot be judged: cd frontend && npm ci --silent && npx tsc --noEmit \u2192 src/app/resumes/page.tsx(234,75): error TS7006: Parameter 't' implicitly has an 'any' type."
       ]
