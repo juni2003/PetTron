@@ -143,6 +143,7 @@ def main() -> None:
     prs_opened:      list[PRRecord] = []
     repos_no_issue:  list[str]      = []
     repos_skipped:   list[str]      = []
+    repos_failed:    dict[str, str] = {}
     run_errors:      list[str]      = []
     audit_results:   list           = []
 
@@ -154,12 +155,18 @@ def main() -> None:
     try:
         audit_results = auditor.run()
         repos_skipped = auditor.skipped_repos
+        repos_failed = auditor.failed_repos
     except Exception as exc:
         msg = f"Repo Auditor failed: {exc}"
         logger.error(f"[Main] ❌ {msg}")
         run_errors.append(msg)
 
     for repo_name, repo_cfg, analysis in audit_results:
+        if repo_name in repos_failed:
+            # The audit never produced a verdict, so there is nothing to patch.
+            run_errors.append(f"Audit failed for {repo_name}: {repos_failed[repo_name]}")
+            continue
+
         if not analysis.issue_found:
             logger.info(f"[Main] {repo_name}: no issue found — skipping PR.")
             repos_no_issue.append(repo_name)
@@ -224,7 +231,7 @@ def main() -> None:
     duration_secs = time.monotonic() - start_time
     # Report the model that actually answered (e.g. "gemini:gemini-2.0-flash"
     # or "groq:llama-3.1-8b-instant") instead of a hard-coded guess.
-    llm_used = llm.last_provider or "not-called"
+    llm_used = llm.last_provider or "none — every provider failed"
 
     try:
         notifier = Notifier(gh, private_repo_name)
@@ -232,6 +239,7 @@ def main() -> None:
             prs_opened=prs_opened,
             repos_skipped=repos_skipped,
             repos_no_issue=repos_no_issue,
+            repos_failed=repos_failed,
             opportunity_report=opportunity_report,
             run_errors=run_errors,
             duration_secs=duration_secs,

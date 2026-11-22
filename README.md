@@ -150,6 +150,14 @@ Non-retryable errors (400/401/403, bad key) now fail in one attempt instead of
 burning ~2 minutes of exponential backoff before the fallback is tried. A
 rejected API key stops that provider at once instead of trying every model.
 
+### A failed audit no longer looks like a clean day
+
+When the LLM could not analyse a repo, `repo_auditor` used to record it as
+"no issue found", so the digest said *"Repos audited (no issues found)"* while
+nothing had been audited at all. Failed audits are now listed under
+**Repos that could NOT be audited** in Part A and repeated in the errors
+section, and the rotation still moves on to the next repo.
+
 ### Editing the workflow file
 
 `.github/workflows/daily_agent.yml` can only be pushed by a token that has the

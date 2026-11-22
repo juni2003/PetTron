@@ -38,6 +38,7 @@ class Notifier:
             prs_opened=prs_opened,
             repos_skipped=repos_skipped,
             repos_no_issue=repos_no_issue,
+            repos_failed=repos_failed,
             opportunity_report=opportunity_report,
             run_errors=run_errors,
             duration_secs=duration_secs,
@@ -58,6 +59,7 @@ class Notifier:
         run_errors: list[str],
         duration_secs: float,
         llm_used: str,
+        repos_failed: dict[str, str] | None = None,
     ) -> str:
         """
         Create the daily digest Issue and return its URL.
@@ -69,6 +71,7 @@ class Notifier:
             prs_opened=prs_opened,
             repos_skipped=repos_skipped,
             repos_no_issue=repos_no_issue,
+            repos_failed=repos_failed,
             opportunity_report=opportunity_report,
             run_errors=run_errors,
             duration_secs=duration_secs,
@@ -159,6 +162,7 @@ class Notifier:
         run_errors: list[str],
         duration_secs: float,
         llm_used: str,
+        repos_failed: dict[str, str] | None = None,
     ) -> str:
         """Build the full Markdown body of the digest Issue."""
 
@@ -178,13 +182,21 @@ class Notifier:
 
         if repos_no_issue:
             part_a_lines.append(
-                f"\n**Repos audited (no issues found):** "
+                "\n**Repos audited (no issues found):** "
                 + ", ".join(f"`{r}`" for r in repos_no_issue)
             )
 
+        if repos_failed:
+            part_a_lines.append(
+                f"\n**Repos that could NOT be audited ({len(repos_failed)}):**"
+            )
+            for name, reason in repos_failed.items():
+                first_line = (reason or "").strip().splitlines()[0][:160]
+                part_a_lines.append(f"- `{name}` — {first_line}")
+
         if repos_skipped:
             part_a_lines.append(
-                f"\n**Repos skipped (open bot PR exists):** "
+                "\n**Repos skipped (open bot PR exists):** "
                 + ", ".join(f"`{r}`" for r in repos_skipped)
             )
 

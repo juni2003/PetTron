@@ -139,5 +139,45 @@ class TestSendDigest(unittest.TestCase):
         repo.create_issue.assert_called_once()
 
 
+class TestFailedAudits(unittest.TestCase):
+    """A dead LLM must never read as a clean day."""
+
+    def _body(self, repos_no_issue=None, **kwargs) -> str:
+        return Notifier._build_body(
+            today="2026-11-15",
+            prs_opened=[],
+            repos_skipped=[],
+            repos_no_issue=repos_no_issue or [],
+            opportunity_report=OpportunityReport(opportunities=[]),
+            run_errors=[],
+            duration_secs=2.0,
+            llm_used="none — every provider failed",
+            **kwargs,
+        )
+
+    def test_unaudited_repo_is_not_listed_as_clean(self):
+        body = self._body(
+            repos_no_issue=["o/clean"],
+            repos_failed={"o/broken": "Both Gemini and Groq failed after all retries."},
+        )
+
+        self.assertIn("could NOT be audited", body)
+        self.assertIn("`o/broken` — Both Gemini and Groq failed", body)
+        clean_line = next(line for line in body.splitlines() if "no issues found" in line)
+        self.assertIn("o/clean", clean_line)
+        self.assertNotIn("o/broken", clean_line)
+
+    def test_failure_reason_is_a_single_line(self):
+        body = self._body(
+            repos_failed={"o/broken": "line one\nline two\nline three"},
+        )
+
+        self.assertIn("`o/broken` — line one", body)
+        self.assertNotIn("line two", body.split("## 💼 Part B")[0])
+
+    def test_no_failed_repos_means_no_failure_section(self):
+        self.assertNotIn("could NOT be audited", self._body(repos_no_issue=["o/clean"]))
+
+
 if __name__ == "__main__":
     unittest.main()
