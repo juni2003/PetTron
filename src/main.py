@@ -32,7 +32,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import yaml
-from github import Github
+from github import Auth, Github
 
 from src.llm_client import LLMClient
 from src.notifier import Notifier
@@ -132,7 +132,7 @@ def main() -> None:
 
     # ── 2. Init clients ────────────────────────────────────────────────────
     logger.info("Initialising GitHub and LLM clients ...")
-    gh  = Github(gh_pat)
+    gh  = Github(auth=Auth.Token(gh_pat))
     llm = LLMClient()
 
     # ── 3. PART A — Repo Auditor ───────────────────────────────────────────
