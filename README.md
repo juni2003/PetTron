@@ -150,6 +150,17 @@ Non-retryable errors (400/401/403, bad key) now fail in one attempt instead of
 burning ~2 minutes of exponential backoff before the fallback is tried. A
 rejected API key stops that provider at once instead of trying every model.
 
+### Editing the workflow file
+
+`.github/workflows/daily_agent.yml` can only be pushed by a token that has the
+`workflow` scope, which a normal `repo`-scoped token does not. The canonical
+copy lives at `docs/daily_agent.workflow.yml`: edit it there, then open the live
+workflow in GitHub and paste the file in (or push it with a `workflow`-scoped
+token). Keep the two identical — the state-commit step at the end of the file
+rebases before pushing, which is what stops a run from failing with
+`! [rejected] main -> main (non-fast-forward)` after anyone has pushed during
+the run.
+
 ### Model ids are preferences, not requirements
 
 Google and Groq retire model ids without notice (`gemini-2.0-flash` and
@@ -199,6 +210,7 @@ Blank values are ignored, so an unset GitHub Actions `vars` entry is safe.
 ```
 PetTron/
 ├── .github/workflows/daily_agent.yml   # Cron job + keep-alive commit
+├── docs/daily_agent.workflow.yml       # Canonical copy of the workflow above
 ├── config/
 │   ├── repos.yaml                      # Your target repos & verify commands
 │   └── profile.json                    # Your skills, projects, pricing
