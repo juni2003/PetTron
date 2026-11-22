@@ -2,25 +2,17 @@
   "last_run_date": "2026-11-22",
   "repo_rotation_index": 0,
   "repos_checked_today": [
-    "juni2003/CrawlX-Data-Scrapping-Project",
-    "juni2003/Smart-Farming-Agentic-AI"
+    "juni2003/Smart-Farming-Agentic-AI",
+    "juni2003/CareerNode"
   ],
   "prs_opened_today": [
     {
-      "repo": "juni2003/CrawlX-Data-Scrapping-Project",
-      "pr_url": "https://github.com/juni2003/CrawlX-Data-Scrapping-Project/pull/4",
-      "pr_title": "fix: Improve error logging in text summarizer",
-      "category": "error_handling",
-      "severity": "medium",
-      "opened_at": "2026-11-22T19:51:46.966066+00:00"
-    },
-    {
       "repo": "juni2003/Smart-Farming-Agentic-AI",
-      "pr_url": "https://github.com/juni2003/Smart-Farming-Agentic-AI/pull/2",
-      "pr_title": "fix: add API key authentication to Flask endpoints",
-      "category": "security",
-      "severity": "high",
-      "opened_at": "2026-11-22T19:51:55.760390+00:00"
+      "pr_url": "https://github.com/juni2003/Smart-Farming-Agentic-AI/pull/3",
+      "pr_title": "fix: add exception handling to agent initialization",
+      "category": "bug",
+      "severity": "medium",
+      "opened_at": "2026-11-22T19:59:44.129267+00:00"
     }
   ],
   "run_history": [
@@ -139,31 +131,25 @@
     {
       "run_date": "2026-11-22",
       "repos_audited": [
-        "juni2003/CrawlX-Data-Scrapping-Project",
-        "juni2003/Smart-Farming-Agentic-AI"
+        "juni2003/Smart-Farming-Agentic-AI",
+        "juni2003/CareerNode"
       ],
       "prs_opened": [
         {
-          "repo": "juni2003/CrawlX-Data-Scrapping-Project",
-          "pr_url": "https://github.com/juni2003/CrawlX-Data-Scrapping-Project/pull/4",
-          "pr_title": "fix: Improve error logging in text summarizer",
-          "category": "error_handling",
-          "severity": "medium",
-          "opened_at": "2026-11-22T19:51:46.966066+00:00"
-        },
-        {
           "repo": "juni2003/Smart-Farming-Agentic-AI",
-          "pr_url": "https://github.com/juni2003/Smart-Farming-Agentic-AI/pull/2",
-          "pr_title": "fix: add API key authentication to Flask endpoints",
-          "category": "security",
-          "severity": "high",
-          "opened_at": "2026-11-22T19:51:55.760390+00:00"
+          "pr_url": "https://github.com/juni2003/Smart-Farming-Agentic-AI/pull/3",
+          "pr_title": "fix: add exception handling to agent initialization",
+          "category": "bug",
+          "severity": "medium",
+          "opened_at": "2026-11-22T19:59:44.129267+00:00"
         }
       ],
       "opportunities_found": 3,
-      "llm_used": "gemini:gemini-2.5-flash",
-      "duration_seconds": 81.3,
-      "errors": []
+      "llm_used": "groq:openai/gpt-oss-20b",
+      "duration_seconds": 324.2,
+      "errors": [
+        "Verification failed for juni2003/CareerNode: verify_cmd fails on the unmodified repo (exit 254), so a patch cannot be judged: npm install --silent && npm run lint --if-present \u2192 no output"
+      ]
     }
   ]
 }
