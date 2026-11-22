@@ -431,6 +431,56 @@ Please analyse the error and provide a CORRECTED patch.
         end = start + sum(len(line) for line in lines[start_line : start_line + width])
         return start, end
 
+    # Literals from another language that a model writes into Python by mistake
+    # ("agent_initialized = false" compiles fine and only fails at runtime).
+    _FOREIGN_LITERAL = re.compile(r"(?<![\w.\"'])=(\s*)(true|false|null|undefined)\b")
+
+    @staticmethod
+    def _code_lines(block: str) -> list[str]:
+        """
+        Return the lines of a block that carry behaviour, not prose.
+
+        Comments and docstring/string-only lines are dropped so a patch that
+        only rewords text can be told apart from one that changes logic.
+        """
+        code = []
+        for line in block.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped[0] in "\"'":
+                continue
+            code.append(stripped)
+        return code
+
+    @classmethod
+    def _reject_low_value_patch(
+        cls, file_path: Path, search_block: str, replace_block: str
+    ) -> None:
+        """
+        Refuse a patch that would open a PR without changing behaviour.
+
+        Both cases below reached real PRs: one rewrote a docstring and changed
+        the wording of a returned string, the other wrote JavaScript's ``false``
+        into Python, which ``compileall`` happily accepts.
+        """
+        added = cls._code_lines(replace_block)
+
+        if not added:
+            raise PatchError(
+                f"patch for {file_path.name} only touches comments, docstrings or "
+                "removes code. Not opening a PR for a patch that changes no behaviour."
+            )
+
+        if file_path.suffix == ".py":
+            for line in added:
+                if cls._FOREIGN_LITERAL.search(line):
+                    raise PatchError(
+                        f"patch for {file_path.name} uses a JavaScript literal "
+                        f"(true/false/null) in Python: {line!r}. "
+                        "Python needs True/False/None."
+                    )
+
     @staticmethod
     def _apply_patch(file_path: Path, search_block: str, replace_block: str) -> str:
         """
@@ -440,6 +490,7 @@ Please analyse the error and provide a CORRECTED patch.
         Returns the new file content (also writes it to disk).
         """
         original = file_path.read_text(encoding="utf-8")
+        Verifier._reject_low_value_patch(file_path, search_block, replace_block)
 
         if search_block in original:
             patched = original.replace(search_block, replace_block, 1)  # First occurrence only

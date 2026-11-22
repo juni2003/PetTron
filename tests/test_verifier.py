@@ -232,3 +232,39 @@ class TestBaselineVerify(unittest.TestCase):
             )
             self.assertEqual(returncode, 1)
             self.assertNotIn("ghp_abcdefghijklmnopqrstuvwxyz", output)
+
+
+class TestLowValuePatchGate(unittest.TestCase):
+    """Opening a PR for a cosmetic patch is worse than opening none."""
+
+    def _apply(self, content, search, replace, name="mod.py"):
+        path = Path(tempfile.mkdtemp(prefix="pettron_gate_")) / name
+        path.write_text(content, encoding="utf-8")
+        try:
+            Verifier._apply_patch(path, search, replace)
+        except PatchError as exc:
+            return f"refused: {exc}"
+        return "applied"
+
+    def test_comment_only_patch_is_refused(self):
+        out = self._apply("def f():\n    pass\n", "    pass\n", "    # TODO\n")
+        self.assertIn("refused", out)
+
+    def test_docstring_only_patch_is_refused(self):
+        content = 'def f():\n    """Doc."""\n    return 1\n'
+        out = self._apply(content, '    """Doc."""\n', '    """Better docs."""\n')
+        self.assertIn("refused", out)
+
+    def test_javascript_literal_in_python_is_refused(self):
+        out = self._apply("x = None\n", "x = None\n", "x = false\n")
+        self.assertIn("JavaScript literal", out)
+
+    def test_real_behaviour_change_is_applied(self):
+        out = self._apply("def f():\n    return 1\n", "    return 1\n", "    return 2\n")
+        self.assertEqual(out, "applied")
+
+    def test_try_except_wrapping_is_applied(self):
+        out = self._apply(
+            "a = 1\n", "a = 1\n", "try:\n    a = 1\nexcept Exception:\n    a = 0\n"
+        )
+        self.assertEqual(out, "applied")
