@@ -19,11 +19,16 @@ repositories:
   last_checked: '2026-11-22'
   name: juni2003/Smart-Farming-Agentic-AI
   verify_cmd: python -m compileall . -q
+# No root package.json: the Next.js app lives in frontend/ and backend/ is the
+# Python API. 'npm install' at the root exits 254, which made every audit of this
+# repo fail its baseline check. tsc is the gate, but it is red on main today, so
+# the repo is reported as unauditable until that is fixed — that is the baseline
+# check working, not a PetTron bug.
 - branch: main
   language: javascript
   last_checked: '2026-11-22'
   name: juni2003/CareerNode
-  verify_cmd: npm install --silent && npm run lint --if-present
+  verify_cmd: cd frontend && npm ci --silent && npx tsc --noEmit
 - branch: main
   language: python
   last_checked: '2026-11-22'
