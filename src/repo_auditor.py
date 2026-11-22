@@ -87,6 +87,10 @@ class RepoAuditor:
         self.repos_config = repos_config
         self.run_state = run_state
         self.skipped_repos: list[str] = []
+        # repo_name -> error message, for audits that never produced a verdict.
+        # Kept separate from the results so the digest can say "could not audit"
+        # instead of the misleading "no issues found".
+        self.failed_repos: dict[str, str] = {}
 
     def run(self) -> list[tuple[str, dict, CodeAnalysisResult]]:
         """
@@ -113,7 +117,12 @@ class RepoAuditor:
                 )
             except Exception as exc:
                 logger.error(f"[Auditor] Failed to audit {repo_name}: {exc}")
-                # Return a "no issue" result so the run continues
+                self.failed_repos[repo_name] = str(exc) or exc.__class__.__name__
+                # Advance the rotation anyway: a repo the LLM cannot audit must
+                # not pin today's slot forever.
+                repo_cfg["last_checked"] = date.today().isoformat()
+                # Return a "no issue" result so the run continues; main.py
+                # surfaces the failure from self.failed_repos.
                 results.append((
                     repo_name,
                     repo_cfg,
