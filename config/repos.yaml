@@ -16,7 +16,7 @@ repositories:
   verify_cmd: python -m compileall . -q
 - branch: main
   language: python
-  last_checked: '2026-11-22'
+  last_checked: '2026-11-25'
   name: juni2003/Smart-Farming-Agentic-AI
   verify_cmd: python -m compileall . -q
 - branch: main
@@ -26,7 +26,7 @@ repositories:
   verify_cmd: cd frontend && npm ci --silent && npx tsc --noEmit
 - branch: main
   language: python
-  last_checked: '2026-11-22'
+  last_checked: '2026-11-25'
   name: juni2003/ai-jobtracker
   verify_cmd: python -m compileall . -q
 rotation:

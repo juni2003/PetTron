@@ -1,18 +1,26 @@
 {
-  "last_run_date": "2026-11-24",
+  "last_run_date": "2026-11-25",
   "repo_rotation_index": 0,
   "repos_checked_today": [
-    "juni2003/CrawlX-Data-Scrapping-Project",
-    "juni2003/VisiHealthAI-Medical-Visual-Question-Answering"
+    "juni2003/Smart-Farming-Agentic-AI",
+    "juni2003/ai-jobtracker"
   ],
   "prs_opened_today": [
     {
-      "repo": "juni2003/CrawlX-Data-Scrapping-Project",
-      "pr_url": "https://github.com/juni2003/CrawlX-Data-Scrapping-Project/pull/5",
-      "pr_title": "fix: Robustify NLTK punkt tokenizer download",
-      "category": "error_handling",
+      "repo": "juni2003/Smart-Farming-Agentic-AI",
+      "pr_url": "https://github.com/juni2003/Smart-Farming-Agentic-AI/pull/4",
+      "pr_title": "fix: Ensure FarmingAgent is fully initialized or None",
+      "category": "bug",
       "severity": "medium",
-      "opened_at": "2026-11-24T17:03:29.994537+00:00"
+      "opened_at": "2026-11-25T16:53:17.172569+00:00"
+    },
+    {
+      "repo": "juni2003/ai-jobtracker",
+      "pr_url": "https://github.com/juni2003/ai-jobtracker/pull/2",
+      "pr_title": "fix: Await remote scraper in scheduled task",
+      "category": "bug",
+      "severity": "high",
+      "opened_at": "2026-11-25T16:53:25.547303+00:00"
     }
   ],
   "run_history": [
@@ -183,6 +191,35 @@
       "opportunities_found": 3,
       "llm_used": "gemini:gemini-2.5-flash",
       "duration_seconds": 81.0,
+      "errors": []
+    },
+    {
+      "run_date": "2026-11-25",
+      "repos_audited": [
+        "juni2003/Smart-Farming-Agentic-AI",
+        "juni2003/ai-jobtracker"
+      ],
+      "prs_opened": [
+        {
+          "repo": "juni2003/Smart-Farming-Agentic-AI",
+          "pr_url": "https://github.com/juni2003/Smart-Farming-Agentic-AI/pull/4",
+          "pr_title": "fix: Ensure FarmingAgent is fully initialized or None",
+          "category": "bug",
+          "severity": "medium",
+          "opened_at": "2026-11-25T16:53:17.172569+00:00"
+        },
+        {
+          "repo": "juni2003/ai-jobtracker",
+          "pr_url": "https://github.com/juni2003/ai-jobtracker/pull/2",
+          "pr_title": "fix: Await remote scraper in scheduled task",
+          "category": "bug",
+          "severity": "high",
+          "opened_at": "2026-11-25T16:53:25.547303+00:00"
+        }
+      ],
+      "opportunities_found": 3,
+      "llm_used": "gemini:gemini-2.5-flash",
+      "duration_seconds": 89.4,
       "errors": []
     }
   ]
