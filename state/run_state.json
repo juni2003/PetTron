@@ -1,26 +1,18 @@
 {
-  "last_run_date": "2026-11-25",
+  "last_run_date": "2026-11-26",
   "repo_rotation_index": 0,
   "repos_checked_today": [
-    "juni2003/Smart-Farming-Agentic-AI",
-    "juni2003/ai-jobtracker"
+    "juni2003/NexusAI-Fashion-Assistant",
+    "juni2003/CareerNode"
   ],
   "prs_opened_today": [
     {
-      "repo": "juni2003/Smart-Farming-Agentic-AI",
-      "pr_url": "https://github.com/juni2003/Smart-Farming-Agentic-AI/pull/4",
-      "pr_title": "fix: Ensure FarmingAgent is fully initialized or None",
+      "repo": "juni2003/NexusAI-Fashion-Assistant",
+      "pr_url": "https://github.com/juni2003/NexusAI-Fashion-Assistant/pull/6",
+      "pr_title": "fix: Correct Supabase RPC function for support search",
       "category": "bug",
       "severity": "medium",
-      "opened_at": "2026-11-25T16:53:17.172569+00:00"
-    },
-    {
-      "repo": "juni2003/ai-jobtracker",
-      "pr_url": "https://github.com/juni2003/ai-jobtracker/pull/2",
-      "pr_title": "fix: Await remote scraper in scheduled task",
-      "category": "bug",
-      "severity": "high",
-      "opened_at": "2026-11-25T16:53:25.547303+00:00"
+      "opened_at": "2026-11-26T16:30:50.300690+00:00"
     }
   ],
   "run_history": [
@@ -221,6 +213,29 @@
       "llm_used": "gemini:gemini-2.5-flash",
       "duration_seconds": 89.4,
       "errors": []
+    },
+    {
+      "run_date": "2026-11-26",
+      "repos_audited": [
+        "juni2003/NexusAI-Fashion-Assistant",
+        "juni2003/CareerNode"
+      ],
+      "prs_opened": [
+        {
+          "repo": "juni2003/NexusAI-Fashion-Assistant",
+          "pr_url": "https://github.com/juni2003/NexusAI-Fashion-Assistant/pull/6",
+          "pr_title": "fix: Correct Supabase RPC function for support search",
+          "category": "bug",
+          "severity": "medium",
+          "opened_at": "2026-11-26T16:30:50.300690+00:00"
+        }
+      ],
+      "opportunities_found": 3,
+      "llm_used": "gemini:gemini-2.5-flash",
+      "duration_seconds": 122.7,
+      "errors": [
+        "Verification failed for juni2003/CareerNode: verify_cmd fails on the unmodified repo (exit 2), so a patch cannot be judged: cd frontend && npm ci --silent && npx tsc --noEmit \u2192 src/app/resumes/page.tsx(234,75): error TS7006: Parameter 't' implicitly has an 'any' type."
+      ]
     }
   ]
 }

@@ -6,7 +6,7 @@ repositories:
   verify_cmd: python -m compileall . -q
 - branch: main
   language: python
-  last_checked: '2026-11-23'
+  last_checked: '2026-11-26'
   name: juni2003/NexusAI-Fashion-Assistant
   verify_cmd: python -m compileall . -q
 - branch: main
@@ -21,7 +21,7 @@ repositories:
   verify_cmd: python -m compileall . -q
 - branch: main
   language: javascript
-  last_checked: '2026-11-23'
+  last_checked: '2026-11-26'
   name: juni2003/CareerNode
   verify_cmd: cd frontend && npm ci --silent && npx tsc --noEmit
 - branch: main
