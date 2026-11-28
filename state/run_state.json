@@ -1,20 +1,11 @@
 {
-  "last_run_date": "2026-11-27",
+  "last_run_date": "2026-11-28",
   "repo_rotation_index": 0,
   "repos_checked_today": [
-    "juni2003/CrawlX-Data-Scrapping-Project",
+    "juni2003/CareerNode",
     "juni2003/VisiHealthAI-Medical-Visual-Question-Answering"
   ],
-  "prs_opened_today": [
-    {
-      "repo": "juni2003/CrawlX-Data-Scrapping-Project",
-      "pr_url": "https://github.com/juni2003/CrawlX-Data-Scrapping-Project/pull/6",
-      "pr_title": "fix: Improve URL summary generation in summarizer.py",
-      "category": "bug",
-      "severity": "low",
-      "opened_at": "2026-11-27T16:16:41.204401+00:00"
-    }
-  ],
+  "prs_opened_today": [],
   "run_history": [
     {
       "run_date": "2026-11-14",
@@ -257,6 +248,20 @@
       "llm_used": "gemini:gemini-2.5-flash",
       "duration_seconds": 73.3,
       "errors": []
+    },
+    {
+      "run_date": "2026-11-28",
+      "repos_audited": [
+        "juni2003/CareerNode",
+        "juni2003/VisiHealthAI-Medical-Visual-Question-Answering"
+      ],
+      "prs_opened": [],
+      "opportunities_found": 3,
+      "llm_used": "gemini:gemini-2.5-flash",
+      "duration_seconds": 137.0,
+      "errors": [
+        "Verification failed for juni2003/CareerNode: verify_cmd fails on the unmodified repo (exit 2), so a patch cannot be judged: cd frontend && npm ci --silent && npx tsc --noEmit \u2192 src/app/resumes/page.tsx(234,75): error TS7006: Parameter 't' implicitly has an 'any' type."
+      ]
     }
   ]
 }

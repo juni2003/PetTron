@@ -11,7 +11,7 @@ repositories:
   verify_cmd: python -m compileall . -q
 - branch: main
   language: python
-  last_checked: '2026-11-27'
+  last_checked: '2026-11-28'
   name: juni2003/VisiHealthAI-Medical-Visual-Question-Answering
   verify_cmd: python -m compileall . -q
 - branch: main
@@ -21,7 +21,7 @@ repositories:
   verify_cmd: python -m compileall . -q
 - branch: main
   language: javascript
-  last_checked: '2026-11-26'
+  last_checked: '2026-11-28'
   name: juni2003/CareerNode
   verify_cmd: cd frontend && npm ci --silent && npx tsc --noEmit
 - branch: main
